@@ -1,0 +1,17 @@
+{
+  "name": "peg-watch",
+  "version": "1.0.0",
+  "description": "Monitor xStock peg: Jupiter on-chain vs Pyth reference",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "peg-watch": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "peg-watch": "node cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
