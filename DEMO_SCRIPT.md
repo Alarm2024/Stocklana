@@ -41,6 +41,14 @@
 
 ---
 
+**Issuer cross-check (optional, +15s):**
+
+> "A third reference: the issuer's own xStocks quote from Backed's public API — MATCH or DIFF against both Jupiter and Pyth. We also show the dividend multiplier, cross-checked against the token's on-chain config, whether trading is halted, and proof of reserves as published by Backed/xStocks."
+
+*[Point at the xStocks quote, Multiplier column, and the proof-of-reserves table. Read figures from the live page.]*
+
+---
+
 ## [1:15–1:40] CLI + repo
 
 > "Same data in the terminal — one command:"

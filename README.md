@@ -22,6 +22,10 @@ Built for **[Stocklana](https://hackathons.solana.com)** — submitted under the
 | Ref age | `publishTime` from Pyth on-chain account |
 | Premium / discount | `(on_chain − reference) / reference × 10 000` basis points |
 | US market | Pyth Hermes `market_hours` metadata (no key) with local NYSE schedule fallback |
+| xStocks quote | xStocks (Backed) public API `GET /public/assets/{symbol}/price-data` → `quote`; compared with Jupiter and with Pyth — **MATCH** within 1%, else **DIFF** with both values |
+| Multiplier | `GET /public/assets/{symbol}/multiplier?network=Solana` → `currentMultiplier`, cross-checked against the mint's Token-2022 `scaledUiAmountConfig` (on-chain MATCH/DIFF). Shown with fair value per raw token = underlying × multiplier |
+| HALTED | `GET /public/assets/{symbol}` → `isTradingHalted`; when true the row shows **HALTED** and premium flags are suppressed |
+| Proof of reserves | `GET /public/proof-of-reserves/{symbol}` → `sharesHeld`, `circulatingSupply`, `holdings[]`, `timestamp` — shown **as published by Backed/xStocks** |
 | Flags | See below |
 
 ### Flags
@@ -32,6 +36,21 @@ Built for **[Stocklana](https://hackathons.solana.com)** — submitted under the
 - **REF STALE (Nh old)** — reference older than **96 hours** at any time (the feed account is not being updated)
 - **UNKNOWN** — a fetch failed; the reason is shown under the flag (never shown as 0 or blank)
 - **AFTER-HOURS GAP** — wide peg during **closed** hours (expected; labeled, not alarmed)
+
+### Multiplier math
+
+xStocks on Solana are Token-2022 mints with a `ScaledUiAmount` multiplier (dividends are reinvested, so the multiplier grows).
+Per [xStocks docs](https://docs.xstocks.fi/developers/multipliers), **scaled (UI) amount = raw amount × multiplier**, and one scaled
+token represents one underlying share. Jupiter's `usdPrice` is per **scaled** token (verified: Jupiter's `usdPricePrescaled` =
+`usdPrice × multiplier`), so the premium compares `usdPrice` with the share price directly. The equivalent raw-token view is shown
+in the Multiplier column: Jupiter price per raw token = `usdPrice × multiplier` vs fair value per raw token = `underlying × multiplier`
+— the ratio is identical. Multiplying the UI price by the multiplier *and* comparing it with the plain share price would double count.
+
+### xStocks (Backed) API — public endpoints used
+
+Base `https://api.backed.fi/api/v2/public` (same data at `https://api.xstocks.fi/api/v2/public`). No key, nothing under `/client` or `/trades`.
+The API sends no CORS headers, so `scripts/fetch-xstocks.mjs` runs in the scheduled GitHub Action (same workflow as PreStocks) and writes
+[`docs/data/xstocks.json`](docs/data/xstocks.json) with `fetched_at`; the CLI calls the API live.
 
 ## Mint verification
 
@@ -100,7 +119,9 @@ node scripts/fetch-prestocks.mjs   # refresh docs/data/prestocks.json locally
 - **Not a trade signal** — read-only monitor; no wallet connect, no swaps, no execution.
 - **Not proof of redemption** — does not check xStock issuer reserves, NAV, or mint/redeem queues.
 - **Not full market microstructure** — Jupiter returns one heuristic USD price, not order-book mid or TWAP across all venues.
-- **Not corporate actions** — splits, dividends, and issuer adjustment multipliers are not modeled (Jupiter exposes some `scaledUiConfig` metadata but Peg Watch does not apply it).
+- **Corporate actions: multiplier only** — the current issuer multiplier is shown and cross-checked on-chain; pending multiplier changes and corporate-action calendars are not modeled. If the multiplier endpoint fails the column shows UNKNOWN.
+- **xStocks quote is the issuer's indicative price** (`price-data`), not an executable price; issuer data is a ~30-minute snapshot (age shown).
+- **Proof of reserves is shown as published by Backed/xStocks** — not audited or independently verified here; no collateral ratio is derived.
 - **Not all xStocks** — only five liquid names with verified mints and Pyth equity feeds.
 - **Not Hermes price-update API** — Pyth’s Hermes `/v2/updates/price/latest` now requires an API key (2026 upgrade). Peg Watch reads the same Pyth prices from **on-chain push-oracle accounts** via public Solana RPC instead (keyless). Hermes is still used for **market-hours metadata** (no key).
 - **Not holiday-perfect** — US market schedule uses Pyth metadata when available; local fallback is Mon–Fri 09:30–16:00 ET only (no holiday calendar).
@@ -122,7 +143,7 @@ DEMO_SCRIPT.md  2-minute hackathon video script
 
 ## Hackathon track
 
-**Pyth Network bounty** — compares Pyth `Equity.US.*/USD` reference feeds to on-chain xStock prices from Jupiter, exactly the “underlying market vs on-chain asset” wedge described in the bounty brief. Also relevant to Stocklana **Infrastructure** (price feeds / analytics).
+**Pyth Network bounty** — compares Pyth `Equity.US.*/USD` reference feeds to on-chain xStock prices from Jupiter (with the issuer's own quote as a third reference), exactly the “underlying market vs on-chain asset” wedge described in the bounty brief. Also relevant to Stocklana **Infrastructure** (price feeds / analytics).
 
 ## License
 
