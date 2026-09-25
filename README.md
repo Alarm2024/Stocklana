@@ -111,7 +111,7 @@ The API sends no CORS headers, so `scripts/fetch-xstocks.mjs` runs in the schedu
 ## Depth-adjusted premium
 
 For every PreStocks token and every tracked xStock, the scheduled Action (`scripts/fetch-depth.mjs`) asks the
-**Jupiter quote API** (`lite-api.jup.ag/swap/v1/quote`, falling back to `api.jup.ag/swap/v1/quote`; keyless, `slippageBps=50`, `ExactIn`) for:
+**Jupiter quote API** (alternating between `lite-api.jup.ag/swap/v1/quote` and `api.jup.ag/swap/v1/quote` to spread rate limits, retrying on HTTP 429; keyless, `slippageBps=50`, `ExactIn`) for:
 
 - **buy**: USDC → token for **$1,000** and **$10,000**
 - **sell**: token → USDC for a token amount worth ~**$1,000** / ~**$10,000** at the Jupiter price
