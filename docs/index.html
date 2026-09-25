@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peg Watch — xStock peg monitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Peg Watch</h1>
+    <p class="tagline">Is a tokenized stock on Solana priced like the real stock?</p>
+    <p class="ai-note">AI-assisted analysis and copy in this project.</p>
+  </header>
+
+  <section class="controls">
+    <button id="refresh" type="button">Refresh</button>
+    <span id="status" class="status"></span>
+  </section>
+
+  <p id="meta" class="meta"></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>On-chain (Jupiter)</th>
+          <th>On-chain age</th>
+          <th>Reference (Pyth)</th>
+          <th>Ref age</th>
+          <th>Premium / discount</th>
+          <th>US market</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="8">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <p>
+      On-chain prices from <a href="https://dev.jup.ag/docs/price">Jupiter Price API</a>.
+      Reference from <a href="https://docs.pyth.network/price-feeds/core/fetch-price-updates">Pyth Network</a>
+      (on-chain push oracle accounts via public Solana RPC).
+      Mint addresses verified via <a href="https://docs.xstocks.fi/developers/quickstart">xStocks / Backed public API</a>.
+    </p>
+    <p class="thresholds" id="thresholds">
+      Flags: |premium| &gt; 100 bps, or reference older than 300s while market open = STALE.
+      After hours gaps are labeled, not alarmed.
+    </p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

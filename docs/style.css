@@ -1,0 +1,90 @@
+:root {
+  --bg: #0b0f14;
+  --surface: #141b24;
+  --text: #e8eef5;
+  --muted: #8fa3b8;
+  --accent: #14f195;
+  --warn: #ffb020;
+  --border: #243041;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+}
+
+.tagline { color: var(--muted); margin: 0 0 0.5rem; }
+.ai-note { font-size: 0.85rem; color: var(--muted); font-style: italic; margin: 0 0 1rem; }
+
+.controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+
+button {
+  background: var(--accent);
+  color: #04120a;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled { opacity: 0.5; cursor: wait; }
+
+.status, .meta { color: var(--muted); font-size: 0.9rem; }
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  margin: 1rem 0;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+
+th, td { padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+
+th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.num { font-variant-numeric: tabular-nums; }
+.sub { color: var(--muted); font-size: 0.8rem; }
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pill.open { background: #0d3d2a; color: var(--accent); }
+.pill.closed { background: #2a2f3a; color: var(--muted); }
+
+.flag.ok { color: var(--accent); }
+.flag.warn { color: var(--warn); font-weight: 600; }
+.flag.muted { color: var(--muted); }
+
+td.warn { color: var(--warn); font-weight: 600; }
+
+footer {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+footer a { color: var(--accent); }
+
+.thresholds { margin-top: 0.75rem; }
