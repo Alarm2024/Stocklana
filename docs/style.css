@@ -180,3 +180,51 @@ footer a, .tagline a { color: var(--accent); }
 code { font-size: 0.85em; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; white-space: nowrap; }
 .subhead { margin: 1.5rem 0 0.25rem; font-size: 1.15rem; font-family: var(--serif); font-weight: 400; }
+
+/* ---- depth, sparklines, chart dialog ---- */
+.depth div { white-space: nowrap; line-height: 1.35; }
+.depth b { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+button.spark { background: transparent; border: 1px solid var(--border); padding: 4px 6px; border-radius: 6px; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; color: var(--text); cursor: pointer; min-height: 44px; }
+button.spark:hover { border-color: var(--accent); }
+svg .zero { stroke: var(--border); stroke-dasharray: 3 3; }
+svg path { fill: none; stroke-width: 1.5; }
+svg .l-p { stroke: var(--accent); } svg .d-p { fill: var(--accent); }
+svg .l-b { stroke: var(--warn); } svg .d-b { fill: var(--warn); }
+svg .l-s { stroke: #6cb6ff; } svg .d-s { fill: #6cb6ff; }
+svg .axis { fill: var(--muted); font-size: 10px; }
+.legend .k-p { color: var(--accent); } .legend .k-b { color: var(--warn); } .legend .k-s { color: #6cb6ff; }
+dialog#chart-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 0; max-width: calc(100vw - 16px); }
+dialog#chart-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.dlg { padding: 1rem 1.25rem; position: relative; }
+.dlg h3 { margin: 0 2rem 0.25rem 0; }
+.dlg .close { position: absolute; top: 0.5rem; right: 0.5rem; background: transparent; color: var(--text); font-size: 1.5rem; padding: 0.25rem 0.75rem; min-height: 44px; }
+
+/* ---- desktop: keep the token column visible while scrolling horizontally ---- */
+.table-wrap th:first-child, .table-wrap td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.table-wrap td:first-child { min-width: 9rem; max-width: 13rem; }
+.mono { display: inline-block; max-width: 100%; }
+
+/* ---- phones: card layout, one card per token ---- */
+@media (max-width: 760px) {
+  body { padding: 0 0.75rem 2rem; font-size: 16px; }
+  .topbar { margin: 0 -0.75rem 0.75rem; }
+  header h1 { font-size: 1.5rem; }
+  .tabs { position: sticky; top: 56px; z-index: 40; background: var(--bg); padding-top: 0.25rem; }
+  .tab { flex: 1; min-height: 44px; font-size: 1rem; }
+  .controls button { min-height: 44px; }
+  .table-wrap { overflow-x: visible; border: none; background: transparent; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { display: none; }
+  .table-wrap tr { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 0 0 0.9rem; padding: 0.35rem 0.75rem; }
+  .table-wrap td { display: grid; grid-template-columns: 38% 62%; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; overflow-wrap: anywhere; }
+  .table-wrap td:last-child { border-bottom: none; }
+  .table-wrap td::before { content: attr(data-label); color: var(--muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+  .table-wrap td:first-child { position: static; display: block; max-width: none; font-size: 1.05rem; padding-top: 0.6rem; }
+  .table-wrap td:first-child::before { content: none; }
+  .table-wrap td[colspan] { display: block; }
+  .table-wrap td[colspan]::before { content: none; }
+  .depth div { white-space: normal; }
+  .sub { font-size: 0.8rem; }
+  .mono { font-size: 0.72rem; }
+}
+@media (min-width: 1100px) { body { max-width: 1500px; } }
