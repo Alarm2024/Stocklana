@@ -52,6 +52,86 @@ Base `https://api.backed.fi/api/v2/public` (same data at `https://api.xstocks.fi
 The API sends no CORS headers, so `scripts/fetch-xstocks.mjs` runs in the scheduled GitHub Action (same workflow as PreStocks) and writes
 [`docs/data/xstocks.json`](docs/data/xstocks.json) with `fetched_at`; the CLI calls the API live.
 
+## Depth-adjusted premium
+
+For every PreStocks token and every tracked xStock, the scheduled Action (`scripts/fetch-depth.mjs`) asks the
+**Jupiter quote API** (`lite-api.jup.ag/swap/v1/quote`, falling back to `api.jup.ag/swap/v1/quote`; keyless, `slippageBps=50`, `ExactIn`) for:
+
+- **buy**: USDC → token for **$1,000** and **$10,000**
+- **sell**: token → USDC for a token amount worth ~**$1,000** / ~**$10,000** at the Jupiter price
+
+It never builds, signs, or sends a swap. From each quote:
+
+- **effective price per token** = USDC in (or out) ÷ tokens out (or in), in **scaled (UI) tokens**: quote amounts are raw units, so
+  tokens = raw ÷ 10^decimals × the mint's effective Token-2022 `ScaledUiAmount` multiplier (read on-chain). This matters for
+  tokens with a multiplier ≠ 1 (e.g. some PreStocks after splits, xStocks after dividends).
+- **premium at size** = effective price ÷ reference − 1 (PreStocks: mark price as published by the PreStocks API; xStocks: Pyth `Equity.US` price)
+- **price impact** = effective price ÷ Jupiter Price API `usdPrice` − 1 (our computation; Jupiter's own `priceImpactPct` is stored verbatim)
+- **NO ROUTE** when Jupiter returns no route; **UNKNOWN** + reason on any other failure (e.g. rate limiting)
+
+The page shows these next to the headline premium, labelled **at $1k** / **at $10k**, buy and sell.
+
+## Premium history
+
+`docs/data/history.json` is append-only: one point per Action run (headline premium + $10k buy/sell premiums), capped at 14 days.
+It was seeded once (`scripts/seed-history.mjs`) from the real `docs/data/prestocks.json` snapshots in git history — those older
+points have the PreStocks headline premium only (no depth, no xStocks), with the snapshot's own `fetched_at` and the commit sha as
+`source`. Each row shows a sparkline (tap for a larger chart) with point count and time range. Missing values are gaps; nothing is interpolated.
+
+## Open JSON feeds
+
+All feeds are static files on GitHub Pages (CORS-friendly), refreshed by the scheduled Action (~every 30 min). Timestamps are ISO 8601 UTC.
+Anyone may read them; a failed value is recorded as `null` / `status: "UNKNOWN"` with an `error`, never as 0.
+
+### `https://alarm2024.github.io/Stocklana/data/prestocks.json`
+
+| Field | Description |
+|-------|-------------|
+| `fetched_at` | when the PreStocks API was fetched |
+| `last_attempt` | `{at, ok, error?}` — if the latest fetch failed, the previous snapshot is kept and this records the failure |
+| `tokens[].symbol`, `name`, `mint`, `external_url` | from the PreStocks API (`contract_address` → `mint`) |
+| `tokens[].prestocks` | `{fetched_at, tokenPrice, markPrice, markValuation, impliedValuation, supply}` as published by the PreStocks API |
+| `tokens[].premium` | `tokenPrice / markPrice − 1` |
+| `tokens[].premium_flag` | `"RICH vs mark"` (≥ +10%), `"CHEAP vs mark"` (≤ −10%), `null`, or `"UNKNOWN"` |
+| `tokens[].checks.jupiter_price` | `{status: MATCH/DIFF/UNKNOWN, prestocks, jupiter, diff, fetched_at, scaled_ui_config}` (MATCH within 1%) |
+| `tokens[].checks.supply` | `{status, prestocks, onchain, slot, rpc, fetched_at}` vs `getTokenSupply` |
+| `tokens[].checks.mint_exists` | `{status: EXISTS/NOT FOUND/NOT A MINT/UNKNOWN, owner_program, slot, fetched_at}` |
+
+### `https://alarm2024.github.io/Stocklana/data/xstocks.json`
+
+| Field | Description |
+|-------|-------------|
+| `fetched_at`, `source` | snapshot time; xStocks (Backed) public API base |
+| `assets[].asset` | `{ok, fetched_at, name, underlyingSymbol, isTradingHalted, currentPeriod, solanaMint, mintMatchesConfig}` from `/public/assets/{symbol}` |
+| `assets[].quote` | `{ok, fetched_at, quote}` from `/public/assets/{symbol}/price-data` |
+| `assets[].multiplier` | `{ok, fetched_at, currentMultiplier, newMultiplier, activationDateTime, reason}` from `/multiplier?network=Solana` |
+| `assets[].status` | `{ok, fetched_at, isMarketTradingHalted, isAtomicTradingHalted}` from `/public/system/status/{symbol}` |
+| `assets[].proof_of_reserves` | `{ok, fetched_at, timestamp, sharesHeld, circulatingSupply, holdings[]}` as published by Backed/xStocks |
+| `assets[].onchain_multiplier`, `multiplier_check` | effective multiplier from the mint's `scaledUiAmountConfig`; MATCH/DIFF vs the API |
+
+Every sub-object has `ok`; when `ok` is `false` it carries `error` instead of values.
+
+### `https://alarm2024.github.io/Stocklana/data/depth.json`
+
+| Field | Description |
+|-------|-------------|
+| `fetched_at`, `sizes_usd`, `sources`, `note` | run time, `[1000, 10000]`, endpoints, disclaimer |
+| `tokens[].group`, `symbol`, `mint` | `prestocks` or `xstocks` |
+| `tokens[].ref`, `ref_label`, `ref_fetched_at` | reference price (PreStocks mark / Pyth) |
+| `tokens[].headline_premium`, `headline_fetched_at` | PreStocks `tokenPrice/markPrice − 1`; xStocks Jupiter `usdPrice / Pyth − 1` |
+| `tokens[].jupiter_price`, `jupiter_price_fetched_at` | Jupiter Price API v3 `usdPrice` (per UI token) |
+| `tokens[].mint_info` | `{decimals, multiplier, fetched_at}` read on-chain |
+| `tokens[].legs.{buy,sell}_{1000,10000}` | `{status: OK/NO ROUTE/UNKNOWN, fetched_at, usdc, ui_tokens, effective_price, premium_vs_ref, price_impact_vs_jupiter_price, jupiter_price_impact_pct, route[], context_slot, quote_host, error?}` |
+
+### `https://alarm2024.github.io/Stocklana/data/history.json`
+
+| Field | Description |
+|-------|-------------|
+| `cap_days`, `updated_at` | retention (14 days) and last write |
+| `points[].t` | snapshot time (ISO) |
+| `points[].source` | `action` (live run) or `git:<sha>` (seeded from a real past snapshot) |
+| `points[].prestocks.{SYMBOL}` / `points[].xstocks.{SYMBOL}` | `{p, b10k, s10k}` — headline premium and $10k buy / sell premium vs reference (fractions; `null` = not available) |
+
 ## Mint verification
 
 All five mints were verified against the official xStocks / Backed public API (`GET https://api.backed.fi/api/v2/public/assets/{symbol}` → Solana deployment address):
@@ -108,6 +188,8 @@ node scripts/fetch-prestocks.mjs   # refresh docs/data/prestocks.json locally
 
 ### PreStocks limits
 
+- **Depth quotes are indicative.** Jupiter quotes are not executable guarantees; prices move and routes change between the snapshot and any trade. A premium at size is **not an arbitrage**.
+
 - **Not investment advice.** Informational, read-only; no wallet connect, no trading.
 - **Mark is not fair value.** The mark price is simply the value published by the PreStocks API.
 - **A premium is not an arbitrage.** Tokens may not be redeemable at mark; minting/redemption has its own eligibility and process.
@@ -121,6 +203,8 @@ node scripts/fetch-prestocks.mjs   # refresh docs/data/prestocks.json locally
 - **Not full market microstructure** — Jupiter returns one heuristic USD price, not order-book mid or TWAP across all venues.
 - **Corporate actions: multiplier only** — the current issuer multiplier is shown and cross-checked on-chain; pending multiplier changes and corporate-action calendars are not modeled. If the multiplier endpoint fails the column shows UNKNOWN.
 - **xStocks quote is the issuer's indicative price** (`price-data`), not an executable price; issuer data is a ~30-minute snapshot (age shown).
+- **Depth quotes ($1k / $10k) are indicative** Jupiter quote-API results, not executable guarantees and not arbitrage; public quote API rate limits can leave some legs UNKNOWN.
+- **History** holds only real snapshot points (max 14 days); points seeded from git history have the PreStocks headline premium only.
 - **Proof of reserves is shown as published by Backed/xStocks** — not audited or independently verified here; no collateral ratio is derived.
 - **Not all xStocks** — only five liquid names with verified mints and Pyth equity feeds.
 - **Not Hermes price-update API** — Pyth’s Hermes `/v2/updates/price/latest` now requires an API key (2026 upgrade). Peg Watch reads the same Pyth prices from **on-chain push-oracle accounts** via public Solana RPC instead (keyless). Hermes is still used for **market-hours metadata** (no key).
@@ -136,6 +220,9 @@ docs/           Static web app (GitHub Pages, served from main /docs)
   js/           Shared fetch + peg logic (also used by CLI); prestocks.js renders the PreStocks tab
   data/         prestocks.json snapshot (written by the GitHub Action)
 scripts/fetch-prestocks.mjs   PreStocks API + on-chain checks -> docs/data/prestocks.json
+scripts/fetch-xstocks.mjs     xStocks public API -> docs/data/xstocks.json
+scripts/fetch-depth.mjs       Jupiter $1k/$10k quotes -> docs/data/depth.json + history.json
+scripts/seed-history.mjs      one-off seed of history.json from git history
 .github/workflows/prestocks-snapshot.yml   ~30-minute schedule + workflow_dispatch
 cli.js          Terminal table
 DEMO_SCRIPT.md  2-minute hackathon video script
