@@ -1,0 +1,221 @@
+{
+ "version": 1,
+ "cap_days": 14,
+ "points": [
+  {
+   "t": "2026-09-25T09:35:18.096Z",
+   "source": "git:20c7a24",
+   "prestocks": {
+    "ANDURIL": {
+     "p": 0.033857,
+     "b10k": null,
+     "s10k": null
+    },
+    "ANTHROPIC": {
+     "p": -0.007648,
+     "b10k": null,
+     "s10k": null
+    },
+    "FIGUREAI": {
+     "p": -0.006167,
+     "b10k": null,
+     "s10k": null
+    },
+    "KALSHI": {
+     "p": 0.002037,
+     "b10k": null,
+     "s10k": null
+    },
+    "NEURALINK": {
+     "p": 0.294589,
+     "b10k": null,
+     "s10k": null
+    },
+    "OPENAI": {
+     "p": 0.330815,
+     "b10k": null,
+     "s10k": null
+    },
+    "POLYMARKET": {
+     "p": 0.033175,
+     "b10k": null,
+     "s10k": null
+    },
+    "SPACEX": {
+     "p": -0.212041,
+     "b10k": null,
+     "s10k": null
+    }
+   },
+   "xstocks": {}
+  },
+  {
+   "t": "2026-09-25T09:36:06.226Z",
+   "source": "git:e043616",
+   "prestocks": {
+    "ANDURIL": {
+     "p": 0.04215,
+     "b10k": null,
+     "s10k": null
+    },
+    "ANTHROPIC": {
+     "p": -0.003536,
+     "b10k": null,
+     "s10k": null
+    },
+    "FIGUREAI": {
+     "p": -0.006185,
+     "b10k": null,
+     "s10k": null
+    },
+    "KALSHI": {
+     "p": 0.002037,
+     "b10k": null,
+     "s10k": null
+    },
+    "NEURALINK": {
+     "p": 0.294496,
+     "b10k": null,
+     "s10k": null
+    },
+    "OPENAI": {
+     "p": 0.337715,
+     "b10k": null,
+     "s10k": null
+    },
+    "POLYMARKET": {
+     "p": 0.043485,
+     "b10k": null,
+     "s10k": null
+    },
+    "SPACEX": {
+     "p": -0.215945,
+     "b10k": null,
+     "s10k": null
+    }
+   },
+   "xstocks": {}
+  },
+  {
+   "t": "2026-09-25T09:45:41.310Z",
+   "source": "git:c55b568",
+   "prestocks": {
+    "ANDURIL": {
+     "p": 0.042016,
+     "b10k": null,
+     "s10k": null
+    },
+    "ANTHROPIC": {
+     "p": -0.003902,
+     "b10k": null,
+     "s10k": null
+    },
+    "FIGUREAI": {
+     "p": -0.027743,
+     "b10k": null,
+     "s10k": null
+    },
+    "KALSHI": {
+     "p": 0.002017,
+     "b10k": null,
+     "s10k": null
+    },
+    "NEURALINK": {
+     "p": 0.299359,
+     "b10k": null,
+     "s10k": null
+    },
+    "OPENAI": {
+     "p": 0.334866,
+     "b10k": null,
+     "s10k": null
+    },
+    "POLYMARKET": {
+     "p": 0.059672,
+     "b10k": null,
+     "s10k": null
+    },
+    "SPACEX": {
+     "p": -0.215399,
+     "b10k": null,
+     "s10k": null
+    }
+   },
+   "xstocks": {}
+  },
+  {
+   "t": "2026-09-25T09:58:39.422Z",
+   "source": "action",
+   "prestocks": {
+    "ANDURIL": {
+     "p": 0.021723,
+     "b10k": 0.076077,
+     "s10k": 0.028199
+    },
+    "ANTHROPIC": {
+     "p": -0.006141,
+     "b10k": 0.014584,
+     "s10k": -0.00272
+    },
+    "FIGUREAI": {
+     "p": -0.027759,
+     "b10k": 0.010459,
+     "s10k": -0.082156
+    },
+    "KALSHI": {
+     "p": 0.003229,
+     "b10k": 0.009129,
+     "s10k": -0.028869
+    },
+    "NEURALINK": {
+     "p": 0.297876,
+     "b10k": 0.355601,
+     "s10k": 0.265201
+    },
+    "OPENAI": {
+     "p": 0.337799,
+     "b10k": 0.358482,
+     "s10k": 0.313187
+    },
+    "POLYMARKET": {
+     "p": 0.031969,
+     "b10k": 0.06923,
+     "s10k": 0.021325
+    },
+    "SPACEX": {
+     "p": -0.21331,
+     "b10k": -0.160831,
+     "s10k": -0.29424
+    }
+   },
+   "xstocks": {
+    "TSLAx": {
+     "p": -0.000834,
+     "b10k": -0.000064,
+     "s10k": -0.001059
+    },
+    "AAPLx": {
+     "p": -0.00164,
+     "b10k": 0.00137,
+     "s10k": -0.00442
+    },
+    "NVDAx": {
+     "p": 0.00019,
+     "b10k": 0.000376,
+     "s10k": -0.000602
+    },
+    "GOOGLx": {
+     "p": -0.004661,
+     "b10k": 0.001019,
+     "s10k": -0.005021
+    },
+    "SPYx": {
+     "p": -0.000963,
+     "b10k": -0.000767,
+     "s10k": -0.001269
+    }
+   }
+  }
+ ],
+ "updated_at": "2026-09-25T10:00:57.329Z"
+}
