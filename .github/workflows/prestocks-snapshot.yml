@@ -2,7 +2,7 @@ name: Data snapshots (PreStocks + xStocks)
 
 on:
   schedule:
-    - cron: '7,37 * * * *' # ~every 30 minutes
+    - cron: '13,43 * * * *' # ~every 30 minutes (GitHub may delay scheduled runs under load)
   workflow_dispatch:
 
 permissions:
