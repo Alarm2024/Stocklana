@@ -1,6 +1,6 @@
 import { STOCKS, THRESHOLDS } from './config.js';
 import { fetchJupiterPrices, jupiterPriceAgeSeconds, extractJupiterUsd } from './jupiter.js';
-import { fetchPythOnChain, fetchPythMarketHours, fetchCurrentSlot } from './pyth.js';
+import { fetchPythOnChainBatch, fetchPythMarketHours, fetchCurrentSlot } from './pyth.js';
 import { isUsMarketOpenLocal, marketStatusLabel, formatAgeSeconds } from './market.js';
 
 function bpsDiff(onChain, reference) {
@@ -27,14 +27,17 @@ function computeFlags(row, marketOpen) {
     flags.push(`WIDE (${absBps} bps)`);
   }
 
-  if (row.refAgeSec != null && marketOpen && row.refAgeSec > THRESHOLDS.staleSeconds) {
+  if (row.refAgeSec != null && row.refAgeSec > THRESHOLDS.maxRefAgeSeconds) {
+    flags.push(`REF STALE (${Math.round(row.refAgeSec / 3600)}h old)`);
+  } else if (row.refAgeSec != null && marketOpen && row.refAgeSec > THRESHOLDS.staleSeconds) {
     flags.push('STALE');
   }
 
-  if (!marketOpen && absBps != null && absBps > THRESHOLDS.premiumBps) {
+  if (!marketOpen && absBps != null && absBps > THRESHOLDS.premiumBps && row.refAgeSec != null && row.refAgeSec <= THRESHOLDS.maxRefAgeSeconds) {
     flags.push('AFTER-HOURS GAP');
   }
 
+  if (row.errors.length) flags.push('UNKNOWN');
   return flags.length ? flags.join(', ') : 'OK';
 }
 
@@ -45,18 +48,19 @@ export async function runPegWatch({ stocks = STOCKS } = {}) {
   const fetchedAt = new Date();
   const mints = stocks.map((s) => s.mint);
 
-  const [jupiter, slotInfo, marketHoursMap] = await Promise.all([
+  const [jupiter, pythBatch, marketHoursMap] = await Promise.all([
     fetchJupiterPrices(mints),
-    fetchCurrentSlot(),
+    fetchPythOnChainBatch(stocks),
     fetchPythMarketHours(stocks),
   ]);
-
-  const pythResults = await Promise.all(stocks.map((s) => fetchPythOnChain(s)));
+  const pythResults = pythBatch.results;
+  // Slot comes from the same RPC response; only fall back to a separate getSlot if needed.
+  const slotInfo = pythBatch.slot != null ? { slot: pythBatch.slot } : await fetchCurrentSlot();
 
   const localOpen = isUsMarketOpenLocal(fetchedAt);
   const anyPythOpen = [...marketHoursMap.values()].some((h) => h.is_open);
   const marketOpen = marketHoursMap.size > 0 ? anyPythOpen : localOpen;
-  const marketLabel = marketStatusLabel(marketOpen, [...marketHoursMap.values()][0]);
+  const marketLabel = marketStatusLabel(marketOpen);
 
   const nowSec = Math.floor(fetchedAt.getTime() / 1000);
 
@@ -86,7 +90,9 @@ export async function runPegWatch({ stocks = STOCKS } = {}) {
       refAge: formatAgeSeconds(refAgeSec),
       premiumBps,
       premiumBpsLabel: formatBps(premiumBps),
-      market: marketStatusLabel(stockMarketOpen, stockMarketHours),
+      market: marketStatusLabel(stockMarketOpen),
+      refPublishTime: pyth.ok ? new Date(pyth.publishTime * 1000).toISOString() : null,
+      refAccount: pyth.ok ? pyth.account : null,
       flags: '',
       errors: [],
     };
@@ -137,6 +143,9 @@ export function formatTable(result) {
   }
   lines.push('');
   lines.push(`Fetched: ${result.fetchedAt}`);
+  for (const r of result.rows) {
+    if (r.errors.length) lines.push(`${r.symbol}: UNKNOWN — ${r.errors.join('; ')}`);
+  }
   lines.push(`US market (aggregate): ${result.marketLabel}`);
   return lines.join('\n');
 }

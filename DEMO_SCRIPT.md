@@ -1,4 +1,6 @@
-# Peg Watch — 2-minute demo script
+# Stocklana (Peg Watch + PreStocks) — ~2.5-minute demo script
+
+> AI-assisted: this script was written with AI assistance.
 
 **Track:** Pyth Network bounty (Stocklana hackathon)
 
@@ -29,7 +31,7 @@
 
 ## [0:45–1:15] Smart flags (after hours)
 
-> "After the NYSE close, the Pyth equity reference stops updating — that's expected. We label it **AFTER-HOURS GAP**, not a red alert.
+> "Outside regular NYSE hours the gap between the 24/7 token and the equity reference can widen — we label that **AFTER-HOURS GAP**, not a red alert. If the reference account hasn't updated for days, we flag **REF STALE**.
 >
 > During market hours, if the reference is older than five minutes, we flag **STALE**. If on-chain diverges more than 100 bps, we flag **WIDE**.
 >
@@ -53,7 +55,23 @@ node cli.js
 
 ---
 
-## [1:40–2:00] Close
+## [1:40–2:10] PreStocks tab (~30s)
+
+*[Click the **PreStocks** tab.]*
+
+> "Second tab: pre-IPO tokens from **PreStocks** on Solana — PreStocks tokens only.
+>
+> For each token we show the token price next to the **mark price as published by the PreStocks API**, and the premium or discount. Plus ten percent or more is flagged **RICH vs mark**, minus ten percent or more **CHEAP vs mark**. Implied valuation versus mark valuation is shown in billions.
+>
+> Then we cross-check on-chain: the price against Jupiter for the same mint, the supply against Solana's `getTokenSupply`, and that the mint account exists. The summary line gives the MATCH / DIFF counts.
+>
+> The PreStocks API can't be called from a browser, so a GitHub Action snapshots it every 30 minutes — the page shows the data age, and anything that failed says UNKNOWN. And to be clear: mark isn't fair value, and a premium isn't an arbitrage."
+
+*[Point at a RICH/CHEAP row, the Jupiter MATCH column, and the "data age" line. Read the figures from the live page — do not quote numbers from this script.]*
+
+---
+
+## [2:10–2:30] Close
 
 > "Peg Watch is infrastructure for the tokenized-stock stack: a quick sanity check before you trade, build a vault, or wire a lending market. Built for Stocklana's Pyth bounty — comparing real equity reference data to on-chain xStock prices on Solana."
 

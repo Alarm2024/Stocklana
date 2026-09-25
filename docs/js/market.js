@@ -31,11 +31,8 @@ export function isUsMarketOpenLocal(now = new Date()) {
   return mins >= open && mins < close;
 }
 
-export function marketStatusLabel(isOpen, pythHours) {
-  if (pythHours?.is_open != null) {
-    return pythHours.is_open ? 'OPEN' : 'CLOSED';
-  }
-  return isUsMarketOpenLocal() ? 'OPEN' : 'CLOSED';
+export function marketStatusLabel(isOpen) {
+  return isOpen ? 'OPEN' : 'CLOSED';
 }
 
 export function formatAgeSeconds(seconds) {

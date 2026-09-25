@@ -6,9 +6,13 @@ const statusEl = document.getElementById('status');
 const metaEl = document.getElementById('meta');
 const refreshBtn = document.getElementById('refresh');
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function flagClass(flags) {
   if (flags === 'OK') return 'ok';
-  if (flags.includes('STALE') || flags.includes('WIDE')) return 'warn';
+  if (flags.includes('STALE') || flags.includes('WIDE') || flags.includes('UNKNOWN')) return 'warn';
   if (flags.includes('AFTER-HOURS')) return 'muted';
   return '';
 }
@@ -25,7 +29,7 @@ function render(result) {
       <td class="num">${r.refAge}</td>
       <td class="num ${r.premiumBps != null && Math.abs(r.premiumBps) > THRESHOLDS.premiumBps ? 'warn' : ''}">${r.premiumBpsLabel}</td>
       <td><span class="pill ${r.market === 'OPEN' ? 'open' : 'closed'}">${r.market}</span></td>
-      <td><span class="flag ${flagClass(r.flags)}">${r.flags}</span></td>
+      <td><span class="flag ${flagClass(r.flags)}">${r.flags}</span>${r.errors.length ? `<br><span class="sub err">${escapeHtml(r.errors.join('; '))}</span>` : ''}</td>
     `;
     if (r.errors.length) {
       tr.title = r.errors.join('; ');
@@ -33,7 +37,7 @@ function render(result) {
     tbody.appendChild(tr);
   }
 
-  metaEl.textContent = `Updated ${new Date(result.fetchedAt).toLocaleString()} · US market ${result.marketLabel} · slot ${result.slot ?? 'UNKNOWN'}`;
+  metaEl.textContent = `All prices fetched ${new Date(result.fetchedAt).toLocaleString()} (${result.fetchedAt}) · US market ${result.marketLabel} · slot ${result.slot ?? 'UNKNOWN'}`;
 }
 
 async function refresh() {

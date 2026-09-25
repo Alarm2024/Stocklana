@@ -1,6 +1,8 @@
 import { ENDPOINTS } from './config.js';
 
 const PYTH_PUSH_ORACLE = 'pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT';
+/** Price update accounts are owned by the Pyth Solana Receiver program. */
+const PYTH_RECEIVER = 'rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ';
 
 function toUint8(data) {
   if (data instanceof Uint8Array) return data;
@@ -84,12 +86,18 @@ export function parsePythPushAccount(data, expectedFeedIdHex) {
 }
 
 async function rpcCall(rpcUrl, method, params) {
-  const res = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-  });
-  if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
+  const doFetch = () =>
+    fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+  let res = await doFetch();
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 1200));
+    res = await doFetch();
+  }
+  if (!res.ok) throw new Error(`RPC HTTP ${res.status} (${new URL(rpcUrl).host})`);
   const json = await res.json();
   if (json.error) throw new Error(json.error.message || 'RPC error');
   return json.result;
@@ -107,27 +115,47 @@ export async function fetchCurrentSlot(rpcUrls = ENDPOINTS.solanaRpc) {
   return { slot: null, rpc: null };
 }
 
-export async function fetchPythOnChain(stock, rpcUrls = ENDPOINTS.solanaRpc) {
+/**
+ * Read all candidate push-oracle accounts (shard 0 / shard 1) for every stock in ONE
+ * getMultipleAccounts call (public RPCs rate-limit bursts), and per stock return the
+ * account with the most recent valid publishTime for the expected feed id.
+ * @returns {Promise<{ results: object[], slot: number|null, rpc: string|null }>}
+ */
+export async function fetchPythOnChainBatch(stocks, rpcUrls = ENDPOINTS.solanaRpc) {
+  const lists = stocks.map((s) => s.pythOnChainAccounts || [s.pythOnChainAccount]);
+  const all = lists.flat();
+  let lastErr = 'all RPC endpoints failed';
   for (const url of rpcUrls) {
     try {
-      const result = await rpcCall(url, 'getAccountInfo', [
-        stock.pythOnChainAccount,
+      const result = await rpcCall(url, 'getMultipleAccounts', [
+        all,
         { encoding: 'base64', commitment: 'confirmed' },
       ]);
-      const value = result?.value;
-      if (!value?.data?.[0]) {
-        return { ok: false, error: 'account not found', rpc: url };
-      }
-      const data = base64ToBytes(value.data[0]);
-      const parsed = parsePythPushAccount(data, stock.pythFeedId);
-      return { ...parsed, rpc: url };
+      const values = result?.value || [];
+      let k = 0;
+      const results = stocks.map((stock, si) => {
+        const parsed = lists[si].map((acct) => {
+          const value = values[k++];
+          if (!value?.data?.[0]) return { ok: false, error: `account ${acct} not found` };
+          if (value.owner !== PYTH_RECEIVER) {
+            return { ok: false, error: `account ${acct} not owned by Pyth receiver program` };
+          }
+          return { ...parsePythPushAccount(base64ToBytes(value.data[0]), stock.pythFeedId), account: acct };
+        });
+        const good = parsed.filter((p) => p.ok).sort((a, b) => b.publishTime - a.publishTime);
+        if (good.length) return { ...good[0], rpc: url };
+        return { ok: false, error: parsed.map((p) => p.error).join('; ') || 'no account data', rpc: url };
+      });
+      return { results, slot: result?.context?.slot ?? null, rpc: url };
     } catch (err) {
-      if (url === rpcUrls[rpcUrls.length - 1]) {
-        return { ok: false, error: String(err.message || err) };
-      }
+      lastErr = String(err.message || err);
     }
   }
-  return { ok: false, error: 'all RPC endpoints failed' };
+  return { results: stocks.map(() => ({ ok: false, error: lastErr })), slot: null, rpc: null };
+}
+
+export async function fetchPythOnChain(stock, rpcUrls = ENDPOINTS.solanaRpc) {
+  return (await fetchPythOnChainBatch([stock], rpcUrls)).results[0];
 }
 
 /** Hermes metadata endpoint (no API key) exposes market-hours per feed. */
@@ -152,4 +180,4 @@ export async function fetchPythMarketHours(stocks) {
   return map;
 }
 
-export { PYTH_PUSH_ORACLE };
+export { PYTH_PUSH_ORACLE, PYTH_RECEIVER };

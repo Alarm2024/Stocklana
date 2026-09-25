@@ -2,12 +2,16 @@ import { ENDPOINTS, THRESHOLDS } from './config.js';
 
 export async function fetchJupiterPrices(mints) {
   const ids = mints.join(',');
-  const res = await fetch(`${ENDPOINTS.jupiterPrice}?ids=${ids}`);
-  if (!res.ok) {
-    return { ok: false, error: `Jupiter HTTP ${res.status}`, prices: {} };
+  try {
+    const res = await fetch(`${ENDPOINTS.jupiterPrice}?ids=${ids}`);
+    if (!res.ok) {
+      return { ok: false, error: `Jupiter HTTP ${res.status}`, prices: {} };
+    }
+    const data = await res.json();
+    return { ok: true, prices: data || {} };
+  } catch (err) {
+    return { ok: false, error: `Jupiter fetch failed: ${err.message || err}`, prices: {} };
   }
-  const data = await res.json();
-  return { ok: true, prices: data };
 }
 
 /**

@@ -13,6 +13,12 @@
     <p class="ai-note">AI-assisted analysis and copy in this project.</p>
   </header>
 
+  <nav class="tabs" role="tablist">
+    <button type="button" class="tab active" role="tab" data-tab="xstocks" aria-selected="true">xStocks</button>
+    <button type="button" class="tab" role="tab" data-tab="prestocks" aria-selected="false">PreStocks</button>
+  </nav>
+
+  <div id="tab-xstocks" class="tab-panel" role="tabpanel">
   <section class="controls">
     <button id="refresh" type="button">Refresh</button>
     <span id="status" class="status"></span>
@@ -52,7 +58,58 @@
       After hours gaps are labeled, not alarmed.
     </p>
   </footer>
+  </div>
 
+  <div id="tab-prestocks" class="tab-panel" role="tabpanel" hidden>
+    <p class="tagline">
+      Pre-IPO tokens issued by <a href="https://prestocks.com">PreStocks</a> on Solana: token price vs mark price,
+      with on-chain cross-checks (Jupiter price, Solana supply, mint account).
+    </p>
+    <section class="controls">
+      <button id="ps-refresh" type="button">Reload snapshot</button>
+      <span id="ps-status" class="status"></span>
+    </section>
+    <p id="ps-meta" class="meta"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Token price</th>
+            <th>Mark price<br><span class="sub">as published by the PreStocks API</span></th>
+            <th>Premium / discount vs mark</th>
+            <th>Implied val. vs mark val.</th>
+            <th>Jupiter price check</th>
+            <th>Supply check</th>
+            <th>Mint</th>
+          </tr>
+        </thead>
+        <tbody id="ps-rows">
+          <tr><td colspan="8">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p id="ps-summary" class="meta"></p>
+    <footer>
+      <p>
+        Token price, mark price, valuations and supply: <a href="https://prestocks.com">PreStocks</a> public API
+        (<code>prestocks.com/api/prestocks</code>). Mark price is shown as published by the PreStocks API.
+        Cross-checks: <a href="https://dev.jup.ag/docs/price">Jupiter Price API v3</a> (MATCH if within 1%)
+        and public Solana RPC (<code>getTokenSupply</code>, <code>getAccountInfo</code>).
+      </p>
+      <p>
+        The PreStocks API does not allow browser (CORS) requests, so a GitHub Action fetches it every ~30 minutes and
+        writes <a href="data/prestocks.json">data/prestocks.json</a>; this page reads that file and shows its age.
+      </p>
+      <p class="thresholds">
+        Flags: premium ≥ +10% = RICH vs mark; ≤ −10% = CHEAP vs mark. Not investment advice. Mark is not fair value;
+        a premium is not an arbitrage — tokens may not be redeemable at mark.
+      </p>
+    </footer>
+  </div>
+
+  <script type="module" src="js/tabs.js"></script>
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/prestocks.js"></script>
 </body>
 </html>
