@@ -18,7 +18,7 @@ Built for **[Stocklana](https://hackathons.solana.com)** — submitted under two
 |--------|--------|
 | On-chain $ | [Jupiter Price API v3](https://dev.jup.ag/docs/price) (`api.jup.ag/price/v3`, keyless) |
 | On-chain age | Estimated from Jupiter `blockId` vs current Solana slot (~0.4s/slot) |
-| Reference $ | [Pyth Network](https://docs.pyth.network/) `Equity.US.*/USD` push-oracle price-update accounts on Solana (public RPC). Both shard 0 and shard 1 PDAs are read and the freshest valid account (owned by the Pyth receiver program, matching feed id) is used — the shard 0 accounts stopped updating on 2026-09-11. |
+| Reference $ | [Pyth Network](https://docs.pyth.network/) `Equity.US.*/USD` push-oracle price-update accounts on Solana (public RPC). Both shard 0 and shard 1 PDAs are read and the freshest valid account (owned by the Pyth receiver program, matching feed id) is used — the shard 0 accounts have stopped updating (TSLA on 2026-09-11, NVDA/SPY on 2026-08-26, AAPL/GOOGL on 2026-08-14 — exact times in the status section below). |
 | Ref age | `publishTime` from Pyth on-chain account |
 | Premium / discount | `(on_chain − reference) / reference × 10 000` basis points |
 | US market | Pyth Hermes `market_hours` metadata (no key) with local NYSE schedule fallback |
