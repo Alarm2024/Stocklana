@@ -1,5 +1,5 @@
 import { STOCKS, THRESHOLDS } from './config.js';
-import { fetchJupiterPrices, jupiterPriceAgeSeconds, extractJupiterUsd } from './jupiter.js';
+import { fetchJupiterPrices, jupiterPriceAgeSeconds, jupiterPriceFor } from './jupiter.js';
 import { fetchPythOnChainBatch, fetchPythMarketHours, fetchCurrentSlot } from './pyth.js';
 import { isUsMarketOpenLocal, marketStatusLabel, formatAgeSeconds } from './market.js';
 
@@ -90,8 +90,9 @@ export async function runPegWatch({ stocks = STOCKS, issuer = null, issuerError 
   const nowSec = Math.floor(fetchedAt.getTime() / 1000);
 
   const rows = stocks.map((stock, i) => {
-    const jEntry = jupiter.ok ? jupiter.prices[stock.mint] : null;
-    const onChainUsd = extractJupiterUsd(jEntry);
+    const jp = jupiter.ok ? jupiterPriceFor(jupiter.prices, stock.mint) : { usd: null, entry: null, reason: null };
+    const jEntry = jp.entry;
+    const onChainUsd = jp.usd;
     const onChainAgeSec = jupiterPriceAgeSeconds(jEntry, slotInfo.slot);
 
     const pyth = pythResults[i];
@@ -131,6 +132,8 @@ export async function runPegWatch({ stocks = STOCKS, issuer = null, issuerError 
       market: marketStatusLabel(stockMarketOpen),
       refPublishTime: pyth.ok ? new Date(pyth.publishTime * 1000).toISOString() : null,
       refAccount: pyth.ok ? pyth.account : null,
+      refProgram: pyth.ok ? pyth.program ?? null : null,
+      refShard: pyth.ok ? pyth.shard ?? null : null,
       quote,
       quoteFetchedAt: iss?.quote?.fetched_at ?? null,
       quoteVsJupiter: compare(quote, onChainUsd),
@@ -150,7 +153,7 @@ export async function runPegWatch({ stocks = STOCKS, issuer = null, issuerError 
     };
 
     if (!jupiter.ok) row.errors.push(`Jupiter: ${jupiter.error}`);
-    if (jEntry == null && jupiter.ok) row.errors.push('Jupiter: no price for mint');
+    if (jupiter.ok && jp.reason) row.errors.push(jp.reason);
     if (!pyth.ok) row.errors.push(`Pyth: ${pyth.error}`);
 
     row.flags = computeFlags(row, stockMarketOpen);

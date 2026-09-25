@@ -78,9 +78,9 @@ function render(result, dh) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${r.symbol}</strong><br><span class="sub">${r.underlying}</span></td>
-      <td class="num">${r.onChainUsd != null ? '$' + r.onChainUsd.toFixed(2) : 'UNKNOWN'}</td>
+      <td class="num">${r.onChainUsd != null ? '$' + r.onChainUsd.toFixed(2) : unk(r.errors.find((e) => e.startsWith('Jupiter')))}</td>
       <td class="num">${r.onChainAge}</td>
-      <td class="num">${r.refUsd != null ? '$' + r.refUsd.toFixed(2) : 'UNKNOWN'}</td>
+      <td class="num">${r.refUsd != null ? '$' + r.refUsd.toFixed(2) + `<br><span class="sub">${escapeHtml(r.refProgram ?? '?')} program · shard ${r.refShard ?? '?'} · <a href="https://explorer.solana.com/address/${escapeHtml(r.refAccount)}" rel="noopener">${escapeHtml(String(r.refAccount).slice(0, 4))}…${escapeHtml(String(r.refAccount).slice(-4))}</a><br>published ${escapeHtml(utc(r.refPublishTime))}</span>` : unk(r.errors.find((e) => e.startsWith('Pyth')))}</td>
       <td class="num">${r.refAge}</td>
       <td class="num ${r.premiumBps != null && Math.abs(r.premiumBps) > THRESHOLDS.premiumBps ? 'warn' : ''}">${r.premiumBpsLabel}</td>
       <td class="num">${depthCell(findDepth(dh.depth, 'xstocks', r.symbol), dh.depth)}</td>

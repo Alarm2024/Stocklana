@@ -228,7 +228,7 @@ async function main() {
       ...it,
       jupiter_price: jupPrice,
       jupiter_price_fetched_at: priceFetchedAt,
-      ...(jupPrice == null ? { jupiter_price_error: priceErr || 'Jupiter returned no price for mint' } : {}),
+      ...(jupPrice == null ? { jupiter_price_error: priceErr || 'Jupiter omitted: no reliable price' } : {}),
       mint_info: mi[it.mint],
       legs,
     });

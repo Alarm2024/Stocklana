@@ -138,7 +138,7 @@ async function main() {
     } else {
       const e = jup.data?.[mint];
       if (!e || !isNum(e.usdPrice)) {
-        row.checks.jupiter_price = { status: 'UNKNOWN', error: 'Jupiter returned no price for mint', fetched_at: jupFetchedAt };
+        row.checks.jupiter_price = { status: 'UNKNOWN', error: 'Jupiter omitted: no reliable price', fetched_at: jupFetchedAt };
       } else if (tokenPrice == null) {
         row.checks.jupiter_price = { status: 'UNKNOWN', error: 'PreStocks tokenPrice missing', jupiter: e.usdPrice, fetched_at: jupFetchedAt };
       } else {
