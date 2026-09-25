@@ -28,6 +28,39 @@ Built for **[Stocklana](https://hackathons.solana.com)** — submitted under the
 | Proof of reserves | `GET /public/proof-of-reserves/{symbol}` → `sharesHeld`, `circulatingSupply`, `holdings[]`, `timestamp` — shown **as published by Backed/xStocks** |
 | Flags | See below |
 
+### Pyth accounts (Solana push feeds) — current vs upgraded program
+
+Per the [Pyth contracts page](https://docs.pyth.network/price-feeds/core/upgrade/contracts), the Solana Price Feed program ID changes with the
+Pyth Core upgrade, so every per-feed push account changes too. Accounts are PDAs with seeds `[shard (u16 LE), feed_id]` — the docs'
+own table derives the "upgraded account address" with shard 0 and the upgraded program, exactly as below.
+
+| | Current | Upgraded |
+|---|---|---|
+| Price Feed program | `pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT` | `pyt2F414BA6dPttK6RddPZUdHfapoBN24GL5wbrPCou` |
+| Solana receiver (account owner) | `rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ` | `rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp` |
+
+| Feed | current shard 0 | current shard 1 | upgraded shard 0 | upgraded shard 1 |
+|---|---|---|---|---|
+| Equity.US.TSLA/USD | `E8WFH8brgP58arcuW2wwsPHiomYrSvrgWTsRLZLAEZUQ` | `FQB8c4zB8Emrp9W8bmyk6GanCLq4aRytHYPDAnaEpq9z` | `Ayoy1gwnhWiycXt31Jj14MDPwnmcERXEg6zTybju8kYo` | `GPMViYaeA8hgkm5BQNNFdMqkT8k7eEDjnwAxDC7Eq7W7` |
+| Equity.US.AAPL/USD | `DJ2FyTgUAkEtXW3U5P9PF19meFTRtW4ZWKKFgACfVbUy` | `D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW` | `AMg1o31UCgYtBgg6FuSCqUuYYq19XVmN11JTdMQ4eK6L` | `GaheeEkhsRGUQuz4vULmjZNg3gH5QxckhPLHeKx7Fajq` |
+| Equity.US.NVDA/USD | `2w1Tg1XTZbUib7srfRoStJ4v5JXVsK7roQEGMsMaGZFC` | `5VETJ8h3p4JrESYrzhjTDAWPEjDjfcnduqe9CjxgqBNd` | `BpsV4NCkHxC3FzykhvwMqo3Xkntm2EyPWdC92fVum1Xh` | `6QgKoDKkYftT129TaRgWY9jL4anWZZLekq15Ttk2W9GD` |
+| Equity.US.GOOGL/USD | `HShKFQqhYkUiXpVyyLmrAALXwWqHB7ikLmPbrwJzpRNh` | `7aUtbtC3o3GVwRWvaDp5fxKjBq53QL3UrVmDzDgeNo8M` | `3pPk4HK7RWig3k9oibQiKPU21gr3PA7BPr4EHpoA1dqA` | `HLfcrataVrKFLr71W4VSpnLLfUPswn2eok3ttUF3mQ6x` |
+| Equity.US.SPY/USD | `9owhtgrdLiUMAH9JKxYFt5pUY4Luy4EzzLhdcWPVuDyy` | `CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA` | `2Gejay6wFavogtNP8HifRscSEi85erznugWAkAty5zjw` | `FbCd3rSihn7PqHriCUCd5JFnzSTzRXJzxZhCaU26X9Q9` |
+
+**Status checked on-chain 2026-09-25 ~10:15 UTC:**
+- The upgraded program is live (e.g. SOL/USD's upgraded shard-0 account `7AviUf9n…` exists, owned by `rec2HH…`, publishing every few seconds).
+- These five equity feeds are **not** in Pyth's sponsored Solana feed list (the docs' `solana-mainnet.json` has 64 sponsored feeds; the only equity one is `Equity.US.GLXY/USD`). Their **upgraded** PDAs (shard 0 and 1) **do not exist** yet.
+- Their **current shard 0** accounts are stale (last publish: TSLA 2026-09-11, AAPL/GOOGL 2026-08-14, NVDA/SPY 2026-08-26 15:54 UTC — right before the 16:00 UTC upgrade).
+- Their **current shard 1** accounts are updated continuously (publish time within seconds, verification level Full, owner `rec5EK…`, feed id matches).
+
+Peg Watch reads all four candidates for each feed in one `getMultipleAccounts` call and uses the freshest valid one (owned by either
+receiver, matching feed id). Right now that is **current program, shard 1**; if the upgraded accounts come into existence and are fresher,
+they are picked up automatically. The page shows which program/shard/account and the publish time for every Pyth price.
+
+**Hermes:** Pyth's Hermes price-update endpoints (`/v2/updates/price/latest`) have required an API key since the Aug 26 2026 upgrade. Peg Watch
+uses no key; prices are on-chain reads only. The keyless Hermes metadata endpoint `/v2/price_feeds` is used only for market-hours metadata,
+with a local NYSE-schedule fallback if it fails.
+
 ### Flags
 
 - **OK** — within thresholds
@@ -207,7 +240,9 @@ node scripts/fetch-prestocks.mjs   # refresh docs/data/prestocks.json locally
 - **History** holds only real snapshot points (max 14 days); points seeded from git history have the PreStocks headline premium only.
 - **Proof of reserves is shown as published by Backed/xStocks** — not audited or independently verified here; no collateral ratio is derived.
 - **Not all xStocks** — only five liquid names with verified mints and Pyth equity feeds.
-- **Not Hermes price-update API** — Pyth’s Hermes `/v2/updates/price/latest` now requires an API key (2026 upgrade). Peg Watch reads the same Pyth prices from **on-chain push-oracle accounts** via public Solana RPC instead (keyless). Hermes is still used for **market-hours metadata** (no key).
+- **Not Hermes price-update API** — Pyth’s Hermes `/v2/updates/price/latest` requires an API key since the Aug 26 2026 upgrade. Peg Watch reads Pyth prices from **on-chain push accounts** via public Solana RPC (keyless). Hermes is used only for **market-hours metadata** (no key).
+- **Pyth equity feeds are not Pyth-sponsored on Solana** — the shard-1 accounts used are kept fresh by whoever pushes updates; if they stop, the age column and REF STALE flag show it.
+- **Jupiter omissions** — Jupiter Price API v3 leaves tokens without a reliable price out of the reply; that shows as UNKNOWN (“Jupiter omitted: no reliable price”), covered by `npm test`.
 - **Not holiday-perfect** — US market schedule uses Pyth metadata when available; local fallback is Mon–Fri 09:30–16:00 ET only (no holiday calendar).
 - **Not latency-critical** — browser RPC + Jupiter fetches are fine for a dashboard, not for HFT or liquidation bots.
 - **Not legal/financial advice** — informational only.

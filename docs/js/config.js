@@ -13,6 +13,12 @@ export const THRESHOLDS = {
   referenceMatch: 0.01,
 };
 
+/** Pyth Solana programs (docs.pyth.network/price-feeds/core/upgrade/contracts). */
+export const PYTH_PROGRAMS = {
+  current: { priceFeed: 'pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT', receiver: 'rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ' },
+  upgraded: { priceFeed: 'pyt2F414BA6dPttK6RddPZUdHfapoBN24GL5wbrPCou', receiver: 'rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp' },
+};
+
 export const ENDPOINTS = {
   jupiterPrice: 'https://api.jup.ag/price/v3',
   pythHermesMeta: 'https://hermes.pyth.network/v2/price_feeds',
@@ -31,9 +37,15 @@ export const STOCKS = [
     mint: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
     pythFeedId: '16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1',
     pythSymbol: 'Equity.US.TSLA/USD',
-    // Pyth push-oracle PDAs for shard 0 and shard 1 (seeds: [shard u16 LE, feed id]).
-    // Shard 0 stopped updating (last publish 2026-09-11); the freshest valid account is used.
-    pythOnChainAccounts: ['E8WFH8brgP58arcuW2wwsPHiomYrSvrgWTsRLZLAEZUQ', 'FQB8c4zB8Emrp9W8bmyk6GanCLq4aRytHYPDAnaEpq9z'],
+    // Pyth push-feed PDAs (seeds: [shard u16 LE, feed id]) for the CURRENT Price Feed program
+    // (pythWSn…, shards 0 and 1) and the UPGRADED program (pyt2F4…, shards 0 and 1).
+    // The freshest valid account (receiver-owned, matching feed id) is used. See README "Pyth accounts".
+    pythOnChainAccounts: [
+      { address: 'E8WFH8brgP58arcuW2wwsPHiomYrSvrgWTsRLZLAEZUQ', program: 'current', shard: 0 },
+      { address: 'FQB8c4zB8Emrp9W8bmyk6GanCLq4aRytHYPDAnaEpq9z', program: 'current', shard: 1 },
+      { address: 'Ayoy1gwnhWiycXt31Jj14MDPwnmcERXEg6zTybju8kYo', program: 'upgraded', shard: 0 },
+      { address: 'GPMViYaeA8hgkm5BQNNFdMqkT8k7eEDjnwAxDC7Eq7W7', program: 'upgraded', shard: 1 },
+    ],
     mintSource: 'https://api.backed.fi/api/v2/public/assets/TSLAx',
   },
   {
@@ -42,9 +54,15 @@ export const STOCKS = [
     mint: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp',
     pythFeedId: '49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688',
     pythSymbol: 'Equity.US.AAPL/USD',
-    // Pyth push-oracle PDAs for shard 0 and shard 1 (seeds: [shard u16 LE, feed id]).
-    // Shard 0 stopped updating (last publish 2026-09-11); the freshest valid account is used.
-    pythOnChainAccounts: ['DJ2FyTgUAkEtXW3U5P9PF19meFTRtW4ZWKKFgACfVbUy', 'D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW'],
+    // Pyth push-feed PDAs (seeds: [shard u16 LE, feed id]) for the CURRENT Price Feed program
+    // (pythWSn…, shards 0 and 1) and the UPGRADED program (pyt2F4…, shards 0 and 1).
+    // The freshest valid account (receiver-owned, matching feed id) is used. See README "Pyth accounts".
+    pythOnChainAccounts: [
+      { address: 'DJ2FyTgUAkEtXW3U5P9PF19meFTRtW4ZWKKFgACfVbUy', program: 'current', shard: 0 },
+      { address: 'D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW', program: 'current', shard: 1 },
+      { address: 'AMg1o31UCgYtBgg6FuSCqUuYYq19XVmN11JTdMQ4eK6L', program: 'upgraded', shard: 0 },
+      { address: 'GaheeEkhsRGUQuz4vULmjZNg3gH5QxckhPLHeKx7Fajq', program: 'upgraded', shard: 1 },
+    ],
     mintSource: 'https://api.backed.fi/api/v2/public/assets/AAPLx',
   },
   {
@@ -53,9 +71,15 @@ export const STOCKS = [
     mint: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh',
     pythFeedId: 'b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593',
     pythSymbol: 'Equity.US.NVDA/USD',
-    // Pyth push-oracle PDAs for shard 0 and shard 1 (seeds: [shard u16 LE, feed id]).
-    // Shard 0 stopped updating (last publish 2026-09-11); the freshest valid account is used.
-    pythOnChainAccounts: ['2w1Tg1XTZbUib7srfRoStJ4v5JXVsK7roQEGMsMaGZFC', '5VETJ8h3p4JrESYrzhjTDAWPEjDjfcnduqe9CjxgqBNd'],
+    // Pyth push-feed PDAs (seeds: [shard u16 LE, feed id]) for the CURRENT Price Feed program
+    // (pythWSn…, shards 0 and 1) and the UPGRADED program (pyt2F4…, shards 0 and 1).
+    // The freshest valid account (receiver-owned, matching feed id) is used. See README "Pyth accounts".
+    pythOnChainAccounts: [
+      { address: '2w1Tg1XTZbUib7srfRoStJ4v5JXVsK7roQEGMsMaGZFC', program: 'current', shard: 0 },
+      { address: '5VETJ8h3p4JrESYrzhjTDAWPEjDjfcnduqe9CjxgqBNd', program: 'current', shard: 1 },
+      { address: 'BpsV4NCkHxC3FzykhvwMqo3Xkntm2EyPWdC92fVum1Xh', program: 'upgraded', shard: 0 },
+      { address: '6QgKoDKkYftT129TaRgWY9jL4anWZZLekq15Ttk2W9GD', program: 'upgraded', shard: 1 },
+    ],
     mintSource: 'https://api.backed.fi/api/v2/public/assets/NVDAx',
   },
   {
@@ -64,9 +88,15 @@ export const STOCKS = [
     mint: 'XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN',
     pythFeedId: '5a48c03e9b9cb337801073ed9d166817473697efff0d138874e0f6a33d6d5aa6',
     pythSymbol: 'Equity.US.GOOGL/USD',
-    // Pyth push-oracle PDAs for shard 0 and shard 1 (seeds: [shard u16 LE, feed id]).
-    // Shard 0 stopped updating (last publish 2026-09-11); the freshest valid account is used.
-    pythOnChainAccounts: ['HShKFQqhYkUiXpVyyLmrAALXwWqHB7ikLmPbrwJzpRNh', '7aUtbtC3o3GVwRWvaDp5fxKjBq53QL3UrVmDzDgeNo8M'],
+    // Pyth push-feed PDAs (seeds: [shard u16 LE, feed id]) for the CURRENT Price Feed program
+    // (pythWSn…, shards 0 and 1) and the UPGRADED program (pyt2F4…, shards 0 and 1).
+    // The freshest valid account (receiver-owned, matching feed id) is used. See README "Pyth accounts".
+    pythOnChainAccounts: [
+      { address: 'HShKFQqhYkUiXpVyyLmrAALXwWqHB7ikLmPbrwJzpRNh', program: 'current', shard: 0 },
+      { address: '7aUtbtC3o3GVwRWvaDp5fxKjBq53QL3UrVmDzDgeNo8M', program: 'current', shard: 1 },
+      { address: '3pPk4HK7RWig3k9oibQiKPU21gr3PA7BPr4EHpoA1dqA', program: 'upgraded', shard: 0 },
+      { address: 'HLfcrataVrKFLr71W4VSpnLLfUPswn2eok3ttUF3mQ6x', program: 'upgraded', shard: 1 },
+    ],
     mintSource: 'https://api.backed.fi/api/v2/public/assets/GOOGLx',
   },
   {
@@ -75,9 +105,15 @@ export const STOCKS = [
     mint: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W',
     pythFeedId: '19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5',
     pythSymbol: 'Equity.US.SPY/USD',
-    // Pyth push-oracle PDAs for shard 0 and shard 1 (seeds: [shard u16 LE, feed id]).
-    // Shard 0 stopped updating (last publish 2026-09-11); the freshest valid account is used.
-    pythOnChainAccounts: ['9owhtgrdLiUMAH9JKxYFt5pUY4Luy4EzzLhdcWPVuDyy', 'CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA'],
+    // Pyth push-feed PDAs (seeds: [shard u16 LE, feed id]) for the CURRENT Price Feed program
+    // (pythWSn…, shards 0 and 1) and the UPGRADED program (pyt2F4…, shards 0 and 1).
+    // The freshest valid account (receiver-owned, matching feed id) is used. See README "Pyth accounts".
+    pythOnChainAccounts: [
+      { address: '9owhtgrdLiUMAH9JKxYFt5pUY4Luy4EzzLhdcWPVuDyy', program: 'current', shard: 0 },
+      { address: 'CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA', program: 'current', shard: 1 },
+      { address: '2Gejay6wFavogtNP8HifRscSEi85erznugWAkAty5zjw', program: 'upgraded', shard: 0 },
+      { address: 'FbCd3rSihn7PqHriCUCd5JFnzSTzRXJzxZhCaU26X9Q9', program: 'upgraded', shard: 1 },
+    ],
     mintSource: 'https://api.backed.fi/api/v2/public/assets/SPYx',
   },
 ];

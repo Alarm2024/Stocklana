@@ -1,8 +1,9 @@
-import { ENDPOINTS } from './config.js';
+import { ENDPOINTS, PYTH_PROGRAMS } from './config.js';
 
 const PYTH_PUSH_ORACLE = 'pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT';
 /** Price update accounts are owned by the Pyth Solana Receiver program. */
-const PYTH_RECEIVER = 'rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ';
+const PYTH_RECEIVER = PYTH_PROGRAMS.current.receiver;
+const RECEIVERS = { [PYTH_PROGRAMS.current.receiver]: 'current', [PYTH_PROGRAMS.upgraded.receiver]: 'upgraded' };
 
 function toUint8(data) {
   if (data instanceof Uint8Array) return data;
@@ -122,8 +123,10 @@ export async function fetchCurrentSlot(rpcUrls = ENDPOINTS.solanaRpc) {
  * @returns {Promise<{ results: object[], slot: number|null, rpc: string|null }>}
  */
 export async function fetchPythOnChainBatch(stocks, rpcUrls = ENDPOINTS.solanaRpc) {
-  const lists = stocks.map((s) => s.pythOnChainAccounts || [s.pythOnChainAccount]);
-  const all = lists.flat();
+  const lists = stocks.map((s) =>
+    (s.pythOnChainAccounts || [s.pythOnChainAccount]).map((a) => (typeof a === 'string' ? { address: a } : a)),
+  );
+  const all = lists.flat().map((a) => a.address);
   let lastErr = 'all RPC endpoints failed';
   for (const url of rpcUrls) {
     try {
@@ -134,16 +137,21 @@ export async function fetchPythOnChainBatch(stocks, rpcUrls = ENDPOINTS.solanaRp
       const values = result?.value || [];
       let k = 0;
       const results = stocks.map((stock, si) => {
-        const parsed = lists[si].map((acct) => {
+        const parsed = lists[si].map((meta) => {
+          const acct = meta.address;
           const value = values[k++];
-          if (!value?.data?.[0]) return { ok: false, error: `account ${acct} not found` };
-          if (value.owner !== PYTH_RECEIVER) {
-            return { ok: false, error: `account ${acct} not owned by Pyth receiver program` };
+          const tag = `${meta.program ?? '?'} shard ${meta.shard ?? '?'} ${acct}`;
+          if (!value?.data?.[0]) return { ok: false, error: `${tag}: account does not exist` };
+          if (!RECEIVERS[value.owner]) {
+            return { ok: false, error: `${tag}: not owned by a Pyth receiver program` };
           }
-          return { ...parsePythPushAccount(base64ToBytes(value.data[0]), stock.pythFeedId), account: acct };
+          const p = parsePythPushAccount(base64ToBytes(value.data[0]), stock.pythFeedId);
+          return p.ok
+            ? { ...p, account: acct, program: meta.program ?? RECEIVERS[value.owner], shard: meta.shard ?? null, receiver: value.owner }
+            : { ...p, error: `${tag}: ${p.error}` };
         });
         const good = parsed.filter((p) => p.ok).sort((a, b) => b.publishTime - a.publishTime);
-        if (good.length) return { ...good[0], rpc: url };
+        if (good.length) return { ...good[0], rpc: url, candidates: parsed.map((p) => (p.ok ? { account: p.account, program: p.program, shard: p.shard, publishTime: p.publishTime } : { error: p.error })) };
         return { ok: false, error: parsed.map((p) => p.error).join('; ') || 'no account data', rpc: url };
       });
       return { results, slot: result?.context?.slot ?? null, rpc: url };
