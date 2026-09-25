@@ -35,13 +35,37 @@
           <th>On-chain age</th>
           <th>Reference (Pyth)</th>
           <th>Ref age</th>
-          <th>Premium / discount</th>
+          <th>Premium / discount<br><span class="sub">Jupiter vs Pyth, bps</span></th>
+          <th>xStocks quote<br><span class="sub">issuer price-data</span></th>
+          <th>Quote vs Jupiter</th>
+          <th>Quote vs Pyth</th>
+          <th>Multiplier<br><span class="sub">Solana, xStocks API</span></th>
           <th>US market</th>
           <th>Flags</th>
         </tr>
       </thead>
       <tbody id="rows">
-        <tr><td colspan="8">Loading…</td></tr>
+        <tr><td colspan="12">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p id="issuer-meta" class="meta"></p>
+
+  <h3 class="subhead">Proof of reserves <span class="sub">— as published by Backed/xStocks</span></h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Shares held</th>
+          <th>Circulating supply (tokens)</th>
+          <th>Custody</th>
+          <th>Published at</th>
+          <th>Fetched at</th>
+        </tr>
+      </thead>
+      <tbody id="por-rows">
+        <tr><td colspan="6">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -52,6 +76,15 @@
       Reference from <a href="https://docs.pyth.network/price-feeds/core/fetch-price-updates">Pyth Network</a>
       (on-chain push oracle accounts via public Solana RPC).
       Mint addresses verified via <a href="https://docs.xstocks.fi/developers/quickstart">xStocks / Backed public API</a>.
+    </p>
+    <p>
+      xStocks quote, multiplier, trading-halt status and proof of reserves come from the
+      <a href="https://docs.xstocks.fi/apis/openapi">xStocks (Backed) public API</a> (no key). That API does not allow browser
+      (CORS) requests, so a GitHub Action writes <a href="data/xstocks.json">data/xstocks.json</a> every ~30 minutes; the fetch
+      time of each value is shown. Quote vs Jupiter / Pyth: MATCH within 1%, else DIFF.
+      Multiplier: Jupiter prices are per scaled (UI) token = 1 share, so the premium compares them with the share price directly;
+      equivalently, raw-token price = Jupiter × multiplier vs fair value per raw token = underlying × multiplier.
+      HALTED (issuer <code>isTradingHalted</code>) suppresses premium flags.
     </p>
     <p class="thresholds" id="thresholds">
       Flags: |premium| &gt; 100 bps, or reference older than 300s while market open = STALE.

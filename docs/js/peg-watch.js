@@ -19,8 +19,28 @@ function formatUsd(v) {
   return v.toFixed(2);
 }
 
+/** MATCH within tolerance (fraction), else DIFF; UNKNOWN if either side missing. */
+export function compare(a, b, tol = THRESHOLDS.referenceMatch) {
+  if (a == null || b == null || !Number.isFinite(a) || !Number.isFinite(b) || b === 0) {
+    return { status: 'UNKNOWN', diff: null };
+  }
+  const diff = a / b - 1;
+  return { status: Math.abs(diff) <= tol ? 'MATCH' : 'DIFF', diff };
+}
+
+function fmtCmp(c) {
+  if (!c || c.status === 'UNKNOWN') return 'UNKNOWN';
+  return `${c.status} ${c.diff >= 0 ? '+' : ''}${(c.diff * 100).toFixed(2)}%`;
+}
+
 function computeFlags(row, marketOpen) {
   const flags = [];
+  if (row.halted === true) {
+    // Issuer reports trading halted: premium flags are suppressed for this row.
+    flags.push('HALTED');
+    if (row.errors.length) flags.push('UNKNOWN');
+    return flags.join(', ');
+  }
   const absBps = row.premiumBps == null ? null : Math.abs(row.premiumBps);
 
   if (absBps != null && absBps > THRESHOLDS.premiumBps) {
@@ -44,7 +64,12 @@ function computeFlags(row, marketOpen) {
 /**
  * @returns {Promise<{ rows: object[], fetchedAt: string, marketOpen: boolean, marketLabel: string, slot: number|null }>}
  */
-export async function runPegWatch({ stocks = STOCKS } = {}) {
+/**
+ * @param {object} [opts]
+ * @param {object|null} [opts.issuer] xStocks (Backed) snapshot as produced by fetchBackedSnapshot()
+ *   (browser: docs/data/xstocks.json written by the GitHub Action; CLI: fetched live).
+ */
+export async function runPegWatch({ stocks = STOCKS, issuer = null, issuerError = null } = {}) {
   const fetchedAt = new Date();
   const mints = stocks.map((s) => s.mint);
 
@@ -73,7 +98,20 @@ export async function runPegWatch({ stocks = STOCKS } = {}) {
     const refUsd = pyth.ok ? pyth.priceUsd : null;
     const refAgeSec = pyth.ok ? Math.max(0, nowSec - pyth.publishTime) : null;
 
+    // Multiplier handling (verified against Jupiter scaledUiConfig and the Token-2022 mint):
+    // Jupiter usdPrice is per SCALED (UI) unit = 1 underlying share, so premium = usdPrice / Pyth - 1.
+    // Equivalent raw-token view: raw price = usdPrice x M, fair value per raw token = underlying x M.
+    const iss = issuer?.assets?.find((a) => a.symbol === stock.symbol) || null;
+    const mult = iss?.multiplier?.ok ? iss.multiplier.currentMultiplier : null;
     const premiumBps = bpsDiff(onChainUsd, refUsd);
+    const quote = iss?.quote?.ok ? iss.quote.quote : null;
+    const halted = iss?.asset?.ok ? iss.asset.isTradingHalted : null;
+    const issuerErrors = [];
+    if (!issuer) issuerErrors.push(`xStocks snapshot: ${issuerError || 'not loaded'}`);
+    else if (!iss) issuerErrors.push('xStocks snapshot: symbol missing');
+    else {
+      for (const k of ['quote', 'multiplier', 'asset']) if (!iss[k]?.ok) issuerErrors.push(`xStocks ${k}: ${iss[k]?.error || 'missing'}`);
+    }
     const stockMarketHours = marketHoursMap.get(stock.symbol);
     const stockMarketOpen =
       stockMarketHours?.is_open != null ? stockMarketHours.is_open : localOpen;
@@ -93,6 +131,20 @@ export async function runPegWatch({ stocks = STOCKS } = {}) {
       market: marketStatusLabel(stockMarketOpen),
       refPublishTime: pyth.ok ? new Date(pyth.publishTime * 1000).toISOString() : null,
       refAccount: pyth.ok ? pyth.account : null,
+      quote,
+      quoteFetchedAt: iss?.quote?.fetched_at ?? null,
+      quoteVsJupiter: compare(quote, onChainUsd),
+      quoteVsPyth: compare(quote, refUsd),
+      multiplier: mult,
+      multiplierFetchedAt: iss?.multiplier?.fetched_at ?? null,
+      multiplierReason: iss?.multiplier?.reason ?? null,
+      multiplierCheck: iss?.multiplier_check ?? null,
+      jupiterRawUsd: onChainUsd != null && mult != null ? onChainUsd * mult : null,
+      fairRawUsd: refUsd != null && mult != null ? refUsd * mult : null,
+      halted,
+      haltedFetchedAt: iss?.asset?.fetched_at ?? null,
+      proofOfReserves: iss?.proof_of_reserves ?? null,
+      issuerErrors,
       flags: '',
       errors: [],
     };
@@ -107,6 +159,7 @@ export async function runPegWatch({ stocks = STOCKS } = {}) {
 
   return {
     rows,
+    issuerFetchedAt: issuer?.fetched_at ?? null,
     fetchedAt: fetchedAt.toISOString(),
     marketOpen,
     marketLabel,
@@ -122,6 +175,10 @@ export function formatTable(result) {
     'Ref $ (Pyth)',
     'Ref age',
     'Premium bps',
+    'xStocks quote',
+    'quote vs Jup',
+    'quote vs Pyth',
+    'Multiplier',
     'US market',
     'Flags',
   ];
@@ -136,15 +193,20 @@ export function formatTable(result) {
         formatUsd(r.refUsd),
         r.refAge,
         r.premiumBpsLabel,
+        formatUsd(r.quote),
+        fmtCmp(r.quoteVsJupiter),
+        fmtCmp(r.quoteVsPyth),
+        r.multiplier != null ? r.multiplier.toFixed(6) : 'UNKNOWN',
         r.market,
         r.flags,
       ].join('\t'),
     );
   }
   lines.push('');
-  lines.push(`Fetched: ${result.fetchedAt}`);
+  lines.push(`Fetched: ${result.fetchedAt} (xStocks issuer data fetched ${result.issuerFetchedAt ?? 'UNKNOWN'})`);
   for (const r of result.rows) {
     if (r.errors.length) lines.push(`${r.symbol}: UNKNOWN — ${r.errors.join('; ')}`);
+    if (r.issuerErrors.length) lines.push(`${r.symbol}: ${r.issuerErrors.join('; ')}`);
   }
   lines.push(`US market (aggregate): ${result.marketLabel}`);
   return lines.join('\n');

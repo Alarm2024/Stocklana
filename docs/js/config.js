@@ -9,6 +9,8 @@ export const THRESHOLDS = {
   slotSeconds: 0.4,
   /** Flag reference as STALE regardless of market hours when older than this (covers long weekends). */
   maxRefAgeSeconds: 96 * 3600,
+  /** xStocks quote vs Jupiter / Pyth: MATCH when within this fraction (1%). */
+  referenceMatch: 0.01,
 };
 
 export const ENDPOINTS = {

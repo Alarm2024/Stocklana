@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 import { runPegWatch, formatTable } from './docs/js/peg-watch.js';
+import { fetchBackedSnapshot } from './docs/js/backed.js';
+import { STOCKS } from './docs/js/config.js';
 
-const result = await runPegWatch();
+// Node has no CORS limits, so the CLI reads the xStocks public API live.
+let issuer = null;
+let issuerError = null;
+try {
+  issuer = await fetchBackedSnapshot(STOCKS);
+} catch (e) {
+  issuerError = String(e?.message || e);
+}
+const result = await runPegWatch({ issuer, issuerError });
 console.log(formatTable(result));
 
 const failed = result.rows.filter((r) => r.errors.length);
