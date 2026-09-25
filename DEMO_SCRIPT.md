@@ -73,7 +73,7 @@ node cli.js
 >
 > Then we cross-check on-chain: the price against Jupiter for the same mint, the supply against Solana's `getTokenSupply`, and that the mint account exists. The summary line gives the MATCH / DIFF counts.
 >
-> The PreStocks API can't be called from a browser, so a GitHub Action snapshots it every 30 minutes — the page shows the data age, and anything that failed says UNKNOWN. And to be clear: mark isn't fair value, and a premium isn't an arbitrage."
+> The PreStocks API can't be called from a browser, so a GitHub Action snapshots it on a 30-minute schedule — and the page always shows the real data age, schedule hiccups included. Anything that failed says UNKNOWN. And to be clear: mark isn't fair value, and a premium isn't an arbitrage."
 
 *[Point at a RICH/CHEAP row, the Jupiter MATCH column, and the "data age" line. Read the figures from the live page — do not quote numbers from this script.]*
 
