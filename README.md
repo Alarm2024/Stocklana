@@ -136,7 +136,7 @@ points have the PreStocks headline premium only (no depth, no xStocks), with the
 
 ## Open JSON feeds
 
-All feeds are static files on GitHub Pages (CORS-friendly), refreshed by the scheduled Action (~every 30 min). Timestamps are ISO 8601 UTC.
+All feeds are static files on GitHub Pages (CORS-friendly), refreshed by the Action on a ~30-minute schedule (manual dispatch when the schedule does not fire). Timestamps are ISO 8601 UTC.
 Anyone may read them; a failed value is recorded as `null` / `status: "UNKNOWN"` with an `error`, never as 0.
 
 ### `https://alarm2024.github.io/Stocklana/data/prestocks.json`
@@ -235,8 +235,9 @@ Pre-IPO tokens issued by **[PreStocks](https://prestocks.com)** on Solana — **
 Every number shows its fetch time; any failure shows **UNKNOWN** plus the reason.
 
 **Why a snapshot file:** `prestocks.com/api/prestocks` sends no CORS headers, so browsers cannot call it directly.
-The GitHub Action [`.github/workflows/prestocks-snapshot.yml`](.github/workflows/prestocks-snapshot.yml) runs every ~30 minutes (and on
-`workflow_dispatch`), executes `node scripts/fetch-prestocks.mjs` (PreStocks API + all on-chain checks), and commits
+The GitHub Action [`.github/workflows/prestocks-snapshot.yml`](.github/workflows/prestocks-snapshot.yml) is scheduled every ~30 minutes (cron
+`13,43 * * * *`, plus `workflow_dispatch`; GitHub may delay or skip scheduled runs — snapshots are then refreshed by manual dispatch,
+and the page always shows the actual data age), executes `node scripts/fetch-prestocks.mjs` (PreStocks API + all on-chain checks), and commits
 [`docs/data/prestocks.json`](docs/data/prestocks.json) with `fetched_at`. The page reads that one file and shows the data age.
 If a refresh fails, the previous snapshot is kept and the failed attempt (time + error) is shown on the page.
 
