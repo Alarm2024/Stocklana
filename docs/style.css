@@ -164,7 +164,7 @@ footer {
   color: var(--muted);
 }
 
-footer a, .tagline a { color: var(--accent); }
+footer a, .tagline a, .sub a, td a { color: var(--accent); }
 
 .thresholds { margin-top: 0.75rem; }
 
