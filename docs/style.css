@@ -216,7 +216,8 @@ dialog#chart-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
   .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
   .table-wrap thead { display: none; }
   .table-wrap tr { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 0 0 0.9rem; padding: 0.35rem 0.75rem; }
-  .table-wrap td { display: grid; grid-template-columns: 38% 62%; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; overflow-wrap: anywhere; }
+  .table-wrap table { width: 100%; min-width: 0; }
+  .table-wrap td { display: grid; grid-template-columns: 38% 62%; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; overflow-wrap: anywhere; white-space: normal; }
   .table-wrap td:last-child { border-bottom: none; }
   .table-wrap td::before { content: attr(data-label); color: var(--muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
   .table-wrap td:first-child { position: static; display: block; max-width: none; font-size: 1.05rem; padding-top: 0.6rem; }
@@ -225,6 +226,6 @@ dialog#chart-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
   .table-wrap td[colspan]::before { content: none; }
   .depth div { white-space: normal; }
   .sub { font-size: 0.8rem; }
-  .mono { font-size: 0.72rem; }
+  .mono { font-size: 0.72rem; white-space: normal; word-break: break-all; }
 }
 @media (min-width: 1100px) { body { max-width: 1500px; } }
