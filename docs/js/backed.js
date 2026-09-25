@@ -9,7 +9,9 @@
  * api.backed.fi sends no CORS headers, so the browser reads docs/data/xstocks.json written by
  * scripts/fetch-xstocks.mjs (GitHub Action). This module runs in Node (Action + CLI).
  */
-export const BACKED_BASE = 'https://api.backed.fi/api/v2/public';
+/** Production server per docs.xstocks.fi is api.xstocks.fi; api.backed.fi serves the same API and is the fallback. */
+export const XSTOCKS_BASES = ['https://api.xstocks.fi/api/v2/public', 'https://api.backed.fi/api/v2/public'];
+export const BACKED_BASE = XSTOCKS_BASES[0];
 const SOLANA_RPCS = ['https://api.mainnet-beta.solana.com', 'https://solana-rpc.publicnode.com'];
 const UA = 'Stocklana-PegWatch/1.0 (+https://github.com/Alarm2024/Stocklana; read-only)';
 
@@ -26,15 +28,23 @@ async function getJson(url, init = {}) {
   return res.json();
 }
 
-/** Wrap one request: { ok, fetched_at, data } or { ok:false, fetched_at, error }. */
-async function probe(url, pick) {
-  const fetched_at = new Date().toISOString();
-  try {
-    const data = pick(await getJson(url));
-    return { ok: true, fetched_at, source: url, ...data };
-  } catch (e) {
-    return { ok: false, fetched_at, source: url, error: errMsg(e) };
+/**
+ * Wrap one request against the primary host, then the fallback host.
+ * Returns { ok, fetched_at, host, source, ...picked } or { ok:false, fetched_at, error }.
+ */
+async function probe(path, pick) {
+  const errors = [];
+  for (const base of XSTOCKS_BASES) {
+    const url = base + path;
+    const fetched_at = new Date().toISOString();
+    try {
+      const data = pick(await getJson(url));
+      return { ok: true, fetched_at, host: new URL(url).host, source: url, ...data };
+    } catch (e) {
+      errors.push(`${new URL(url).host}: ${errMsg(e)}`);
+    }
   }
+  return { ok: false, fetched_at: new Date().toISOString(), source: path, error: errors.join('; ') };
 }
 
 async function rpc(method, params) {
@@ -93,7 +103,7 @@ export async function fetchBackedSnapshot(stocks) {
   for (const [i, s] of stocks.entries()) {
     const sym = encodeURIComponent(s.symbol);
     const [asset, quote, multiplier, status, por] = await Promise.all([
-      probe(`${BACKED_BASE}/assets/${sym}`, (d) => {
+      probe(`/assets/${sym}`, (d) => {
         const sol = (d.deployments || []).find((x) => x.network === 'Solana');
         if (typeof d.isTradingHalted !== 'boolean') throw new Error('isTradingHalted missing');
         return {
@@ -105,11 +115,11 @@ export async function fetchBackedSnapshot(stocks) {
           mintMatchesConfig: sol?.address === s.mint,
         };
       }),
-      probe(`${BACKED_BASE}/assets/${sym}/price-data`, (d) => {
+      probe(`/assets/${sym}/price-data`, (d) => {
         if (!isNum(d.quote)) throw new Error('quote missing or not a number');
         return { quote: d.quote };
       }),
-      probe(`${BACKED_BASE}/assets/${sym}/multiplier?network=Solana`, (d) => {
+      probe(`/assets/${sym}/multiplier?network=Solana`, (d) => {
         if (!isNum(d.currentMultiplier) || d.currentMultiplier <= 0) throw new Error('currentMultiplier missing');
         return {
           currentMultiplier: d.currentMultiplier,
@@ -118,13 +128,16 @@ export async function fetchBackedSnapshot(stocks) {
           reason: d.reason ?? null,
         };
       }),
-      probe(`${BACKED_BASE}/system/status/${sym}`, (d) => {
+      probe(`/system/status/${sym}`, (d) => {
         if (typeof d.isMarketTradingHalted !== 'boolean') throw new Error('isMarketTradingHalted missing');
         return { isMarketTradingHalted: d.isMarketTradingHalted, isAtomicTradingHalted: d.isAtomicTradingHalted ?? null };
       }),
-      probe(`${BACKED_BASE}/proof-of-reserves/${sym}`, (d) => {
+      probe(`/proof-of-reserves/${sym}`, (d) => {
         if (!d.timestamp || d.sharesHeld == null) throw new Error('timestamp/sharesHeld missing');
+        const held = Number(d.sharesHeld);
+        const circ = Number(d.circulatingSupply);
         return {
+          coverage: Number.isFinite(held) && Number.isFinite(circ) && circ > 0 ? held / circ : null,
           timestamp: d.timestamp,
           sharesHeld: d.sharesHeld,
           circulatingSupply: d.circulatingSupply ?? null,
@@ -132,7 +145,45 @@ export async function fetchBackedSnapshot(stocks) {
         };
       }),
     ]);
+    const nowIso = new Date().toISOString();
+    const corporateActions = await probe(`/corporate-actions/upcoming?symbol=${sym}&pageSize=50`, (d) => {
+      if (!Array.isArray(d.nodes)) throw new Error('nodes missing');
+      const pick = (n) => ({
+        caType: n.caType ?? null,
+        effectiveTimeUtc: n.effectiveTimeUtc ?? null,
+        status: n.status ?? null,
+        multiplierOld: n.multiplierOld ?? null,
+        multiplierNew: n.multiplierNew ?? null,
+        grossCashflowUsd: n.grossCashflowUsd ?? null,
+        netCashflowUsd: n.netCashflowUsd ?? null,
+        fromUnits: n.fromUnits ?? null,
+        toUnits: n.toUnits ?? null,
+      });
+      const mine = d.nodes.filter((n) => n.xstockSymbol === s.symbol);
+      return {
+        // "upcoming" = effective time still in the future; the endpoint also returns past-dated "Scheduled" rows
+        upcoming: mine.filter((n) => n.effectiveTimeUtc && n.effectiveTimeUtc > nowIso).map(pick),
+        past_dated_listed: mine.filter((n) => !n.effectiveTimeUtc || n.effectiveTimeUtc <= nowIso).length,
+        total_nodes: d.page?.totalNodes ?? null,
+      };
+    });
     const c = chain[i];
+    // Pending multiplier: on-chain Token-2022 config is authoritative for the timestamp (unix seconds);
+    // the API's newMultiplier / activationDateTime are shown as published.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rawTs = c.ok && c.raw ? Number(c.raw.newMultiplierEffectiveTimestamp) : null;
+    const pendingMultiplier = {
+      fetched_at: c.fetched_at,
+      api_newMultiplier: multiplier.ok ? multiplier.newMultiplier : null,
+      api_activationDateTime: multiplier.ok ? multiplier.activationDateTime : null,
+      onchain_newMultiplier: c.ok && c.raw ? Number(c.raw.newMultiplier) : null,
+      onchain_effective_at: rawTs > 0 ? new Date(rawTs * 1000).toISOString() : null,
+      status: !c.ok && !multiplier.ok
+        ? 'UNKNOWN'
+        : (rawTs > nowSec && Number(c.raw.newMultiplier) !== Number(c.raw.multiplier)) || (multiplier.ok && multiplier.newMultiplier && multiplier.activationDateTime)
+          ? 'SCHEDULED'
+          : 'NONE',
+    };
     const multiplierCheck =
       multiplier.ok && c.ok
         ? {
@@ -142,7 +193,7 @@ export async function fetchBackedSnapshot(stocks) {
             fetched_at: c.fetched_at,
           }
         : { status: 'UNKNOWN', error: [multiplier.ok ? null : multiplier.error, c.ok ? null : `on-chain: ${c.error}`].filter(Boolean).join('; '), fetched_at: c.fetched_at };
-    assets.push({ symbol: s.symbol, mint: s.mint, asset, quote, multiplier, status, proof_of_reserves: por, onchain_multiplier: c, multiplier_check: multiplierCheck });
+    assets.push({ symbol: s.symbol, mint: s.mint, asset, quote, multiplier, status, proof_of_reserves: por, corporate_actions: corporateActions, pending_multiplier: pendingMultiplier, onchain_multiplier: c, multiplier_check: multiplierCheck });
   }
-  return { fetched_at: started, completed_at: new Date().toISOString(), source: BACKED_BASE, assets };
+  return { fetched_at: started, completed_at: new Date().toISOString(), source: XSTOCKS_BASES[0], fallback: XSTOCKS_BASES[1], assets };
 }

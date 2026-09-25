@@ -43,3 +43,25 @@ test('runPegWatch: omitted mint renders UNKNOWN (not 0) and does not throw', asy
     globalThis.fetch = realFetch;
   }
 });
+
+test('xStocks API: primary host fails -> fallback api.backed.fi answers and is recorded', async () => {
+  const { fetchBackedSnapshot } = await import('../docs/js/backed.js');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('api.xstocks.fi')) return new Response('down', { status: 503 });
+    if (u.includes('/price-data')) return new Response('{"quote":123.45}', { status: 200 });
+    return new Response('{"error":"fixture"}', { status: 500 });
+  };
+  try {
+    const snap = await fetchBackedSnapshot([{ symbol: 'TSTx', mint: PRESENT }]);
+    const a = snap.assets[0];
+    assert.equal(a.quote.ok, true);
+    assert.equal(a.quote.quote, 123.45);
+    assert.equal(a.quote.host, 'api.backed.fi');
+    assert.equal(a.multiplier.ok, false); // other endpoints fail on both hosts -> UNKNOWN with both errors
+    assert.match(a.multiplier.error, /api\.xstocks\.fi: HTTP 503.*api\.backed\.fi: HTTP 500/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

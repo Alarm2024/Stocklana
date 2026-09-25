@@ -12,11 +12,11 @@ await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify(snap, null, 2) + '\n');
 let failures = 0;
 for (const a of snap.assets) {
-  const parts = ['asset', 'quote', 'multiplier', 'status', 'proof_of_reserves'].filter((k) => !a[k].ok);
+  const parts = ['asset', 'quote', 'multiplier', 'status', 'proof_of_reserves', 'corporate_actions'].filter((k) => !a[k].ok);
   failures += parts.length;
   console.log(
-    `${a.symbol}\tquote ${a.quote.ok ? a.quote.quote : 'UNKNOWN'}\tmult ${a.multiplier.ok ? a.multiplier.currentMultiplier : 'UNKNOWN'} (${a.multiplier_check.status})\thalted ${a.asset.ok ? a.asset.isTradingHalted : 'UNKNOWN'}\tPoR ${a.proof_of_reserves.ok ? a.proof_of_reserves.timestamp : 'UNKNOWN'}${parts.length ? '\tFAILED: ' + parts.join(',') : ''}`,
+    `${a.symbol}\tquote ${a.quote.ok ? a.quote.quote : 'UNKNOWN'}\tmult ${a.multiplier.ok ? a.multiplier.currentMultiplier : 'UNKNOWN'} (${a.multiplier_check.status})\thalted ${a.asset.ok ? a.asset.isTradingHalted : 'UNKNOWN'}\tPoR ${a.proof_of_reserves.ok ? a.proof_of_reserves.timestamp + ' cov ' + (a.proof_of_reserves.coverage * 100).toFixed(2) + '%' : 'UNKNOWN'}\tCA ${a.corporate_actions.ok ? a.corporate_actions.upcoming.length + ' upcoming' : 'UNKNOWN'}\tpendMult ${a.pending_multiplier.status}\thost ${a.quote.host ?? '-'}${parts.length ? '\tFAILED: ' + parts.join(',') : ''}`,
   );
 }
 console.log('fetched_at', snap.fetched_at);
-if (failures === snap.assets.length * 5) process.exitCode = 1; // everything failed
+if (failures === snap.assets.length * 6) process.exitCode = 1; // everything failed

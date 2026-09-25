@@ -81,7 +81,30 @@ in the Multiplier column: Jupiter price per raw token = `usdPrice × multiplier`
 
 ### xStocks (Backed) API — public endpoints used
 
-Base `https://api.backed.fi/api/v2/public` (same data at `https://api.xstocks.fi/api/v2/public`). No key, nothing under `/client` or `/trades`.
+Primary `https://api.xstocks.fi/api/v2/public` (the production server listed in the docs), fallback `https://api.backed.fi/api/v2/public`;
+the host that answered is recorded per value (`host`) and shown on the page. No key, nothing under `/client` or `/trades`.
+
+| Endpoint | Used for |
+|---|---|
+| `/public/assets/{symbol}` | `isTradingHalted`, Solana mint cross-check |
+| `/public/assets/{symbol}/price-data` | xStocks quote |
+| `/public/assets/{symbol}/multiplier?network=Solana` | current multiplier; pending `newMultiplier` / `activationDateTime` |
+| `/public/system/status/{symbol}` | market / atomic trading halt |
+| `/public/proof-of-reserves/{symbol}` | shares held, circulating supply, custody, timestamp → **reserve coverage** |
+| `/public/corporate-actions/upcoming?symbol={symbol}` | upcoming corporate actions strip |
+
+**Reserve coverage** = `sharesHeld ÷ circulatingSupply` from the same proof-of-reserves record, shown as a % with the PoR timestamp and
+flagged **UNDER 100%** below 100%. Both figures are as published; the API does not state whether `circulatingSupply` is in share-equivalent
+(multiplier-scaled) or raw token units, so the ratio is exactly the published quotient and not multiplier-adjusted.
+
+**Upcoming corporate actions**: only entries whose `effectiveTimeUtc` is still in the future are shown ("none announced" otherwise); the
+endpoint also returns past-dated `Scheduled` entries, which are counted but not shown. **Pending multiplier**: "multiplier change scheduled
+<date>" when the mint's on-chain `newMultiplierEffectiveTimestamp` is in the future with a different `newMultiplier`, or the API reports a
+non-zero `newMultiplier` + `activationDateTime`; otherwise "none announced".
+
+**Not done:** circulating supply excluding Backed operational wallets (`/public/system/wallets`). The wallet list spans EVM, Solana, TON
+and Tron, while `circulatingSupply` is aggregated across chains; doing the exclusion correctly would need per-chain balances for every
+wallet, so it is skipped rather than approximated.
 The API sends no CORS headers, so `scripts/fetch-xstocks.mjs` runs in the scheduled GitHub Action (same workflow as PreStocks) and writes
 [`docs/data/xstocks.json`](docs/data/xstocks.json) with `fetched_at`; the CLI calls the API live.
 
@@ -134,12 +157,14 @@ Anyone may read them; a failed value is recorded as `null` / `status: "UNKNOWN"`
 
 | Field | Description |
 |-------|-------------|
-| `fetched_at`, `source` | snapshot time; xStocks (Backed) public API base |
+| `fetched_at`, `source`, `fallback` | snapshot time; primary and fallback API base. Every sub-object records the `host` that answered |
 | `assets[].asset` | `{ok, fetched_at, name, underlyingSymbol, isTradingHalted, currentPeriod, solanaMint, mintMatchesConfig}` from `/public/assets/{symbol}` |
 | `assets[].quote` | `{ok, fetched_at, quote}` from `/public/assets/{symbol}/price-data` |
 | `assets[].multiplier` | `{ok, fetched_at, currentMultiplier, newMultiplier, activationDateTime, reason}` from `/multiplier?network=Solana` |
 | `assets[].status` | `{ok, fetched_at, isMarketTradingHalted, isAtomicTradingHalted}` from `/public/system/status/{symbol}` |
-| `assets[].proof_of_reserves` | `{ok, fetched_at, timestamp, sharesHeld, circulatingSupply, holdings[]}` as published by Backed/xStocks |
+| `assets[].proof_of_reserves` | `{ok, fetched_at, host, timestamp, sharesHeld, circulatingSupply, coverage, holdings[]}` as published by Backed/xStocks; `coverage` = sharesHeld ÷ circulatingSupply |
+| `assets[].corporate_actions` | `{ok, fetched_at, host, upcoming[{caType, effectiveTimeUtc, status, multiplierOld, multiplierNew, grossCashflowUsd, netCashflowUsd, fromUnits, toUnits}], past_dated_listed, total_nodes}` |
+| `assets[].pending_multiplier` | `{status: NONE/SCHEDULED/UNKNOWN, api_newMultiplier, api_activationDateTime, onchain_newMultiplier, onchain_effective_at, fetched_at}` |
 | `assets[].onchain_multiplier`, `multiplier_check` | effective multiplier from the mint's `scaledUiAmountConfig`; MATCH/DIFF vs the API |
 
 Every sub-object has `ok`; when `ok` is `false` it carries `error` instead of values.

@@ -34,17 +34,41 @@ function multCell(r) {
   return `×${r.multiplier.toFixed(6)}${r.multiplierReason ? ` <span class="sub">(${escapeHtml(r.multiplierReason)})</span>` : ''}${chkTxt}${fair}${fetched(r.multiplierFetchedAt)}`;
 }
 
+const caStrip = document.getElementById('ca-strip');
+function renderCorporateActions(result) {
+  caStrip.innerHTML = '';
+  for (const r of result.rows) {
+    const ca = r.corporateActions;
+    const pm = r.pendingMultiplier;
+    let caTxt;
+    if (!ca || !ca.ok) caTxt = unk(ca?.error || 'not in snapshot');
+    else if (!ca.upcoming.length) caTxt = 'corporate actions: none announced';
+    else
+      caTxt = ca.upcoming
+        .map((e) => `${escapeHtml(e.caType)} ${escapeHtml(utc(e.effectiveTimeUtc))}${e.grossCashflowUsd ? ` · gross $${escapeHtml(e.grossCashflowUsd)}/share` : ''}${e.multiplierNew ? ` · multiplier → ${escapeHtml(e.multiplierNew)}` : ''}${e.status ? ` (${escapeHtml(e.status)})` : ''}`)
+        .join('; ');
+    let pmTxt;
+    if (!pm || pm.status === 'UNKNOWN') pmTxt = unk('multiplier data unavailable');
+    else if (pm.status === 'SCHEDULED')
+      pmTxt = `<span class="diff">multiplier change scheduled ${escapeHtml(pm.onchain_effective_at ? utc(pm.onchain_effective_at) : `(API activationDateTime ${pm.api_activationDateTime})`)}</span> → ${escapeHtml(pm.onchain_newMultiplier ?? pm.api_newMultiplier)}`;
+    else pmTxt = 'multiplier change: none announced';
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${r.symbol}</strong> — ${caTxt} · ${pmTxt}${ca?.ok && ca.past_dated_listed ? ` <span class="sub">(${ca.past_dated_listed} past-dated entr${ca.past_dated_listed === 1 ? 'y' : 'ies'} also listed by the API, not shown)</span>` : ''}<br><span class="sub">fetched ${escapeHtml(utc(ca?.fetched_at))}${ca?.host ? ` via ${escapeHtml(ca.host)}` : ''}</span>`;
+    caStrip.appendChild(li);
+  }
+}
+
 function renderPor(result) {
   porBody.innerHTML = '';
   for (const r of result.rows) {
     const p = r.proofOfReserves;
     const tr = document.createElement('tr');
     if (!p || !p.ok) {
-      tr.innerHTML = `<td><strong>${r.symbol}</strong></td><td colspan="5">${unk(p?.error || 'not in snapshot')}</td>`;
+      tr.innerHTML = `<td><strong>${r.symbol}</strong></td><td colspan="6">${unk(p?.error || 'not in snapshot')}</td>`;
     } else {
       const fmt = (v) => (v == null || !Number.isFinite(Number(v)) ? 'UNKNOWN' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 4 }));
       const custody = (p.holdings || []).map((h) => `${escapeHtml(h.provider)}: ${fmt(h.quantity)} ${escapeHtml(h.symbol)}`).join('<br>') || 'UNKNOWN';
-      tr.innerHTML = `<td><strong>${r.symbol}</strong></td><td class="num">${fmt(p.sharesHeld)}</td><td class="num">${fmt(p.circulatingSupply)}</td><td>${custody}</td><td>${escapeHtml(utc(p.timestamp))}</td><td>${escapeHtml(utc(p.fetched_at))}</td>`;
+      tr.innerHTML = `<td><strong>${r.symbol}</strong></td><td class="num">${fmt(p.sharesHeld)}</td><td class="num">${fmt(p.circulatingSupply)}</td><td class="num">${p.coverage != null ? `<span class="${p.coverage < 1 ? 'diff' : 'match'}">${(p.coverage * 100).toFixed(2)}%${p.coverage < 1 ? ' — UNDER 100%' : ''}</span><br><span class="sub">PoR ${escapeHtml(utc(p.timestamp))}</span>` : unk('sharesHeld or circulatingSupply missing')}</td><td>${custody}</td><td>${escapeHtml(utc(p.timestamp))}</td><td>${escapeHtml(utc(p.fetched_at))}${p.host ? `<br><span class="sub">via ${escapeHtml(p.host)}</span>` : ''}</td>`;
     }
     porBody.appendChild(tr);
   }
@@ -85,7 +109,7 @@ function render(result, dh) {
       <td class="num ${r.premiumBps != null && Math.abs(r.premiumBps) > THRESHOLDS.premiumBps ? 'warn' : ''}">${r.premiumBpsLabel}</td>
       <td class="num">${depthCell(findDepth(dh.depth, 'xstocks', r.symbol), dh.depth)}</td>
       <td>${sparkCell(dh.history, 'xstocks', r.symbol)}</td>
-      <td class="num">${r.quote != null ? '$' + r.quote.toFixed(2) + fetched(r.quoteFetchedAt) : unk(r.issuerErrors.find((e) => e.includes('quote')) || r.issuerErrors[0])}</td>
+      <td class="num">${r.quote != null ? '$' + r.quote.toFixed(2) + fetched(r.quoteFetchedAt) + (r.issuerHost ? `<br><span class="sub">via ${escapeHtml(r.issuerHost)}</span>` : '') : unk(r.issuerErrors.find((e) => e.includes('quote')) || r.issuerErrors[0])}</td>
       <td class="num">${cmpCell(r.quoteVsJupiter, r.quote, 'xStocks', r.onChainUsd, 'Jupiter', r.quoteFetchedAt)}</td>
       <td class="num">${cmpCell(r.quoteVsPyth, r.quote, 'xStocks', r.refUsd, 'Pyth', r.quoteFetchedAt)}</td>
       <td class="num">${multCell(r)}</td>
@@ -99,6 +123,7 @@ function render(result, dh) {
   }
 
   renderPor(result);
+  renderCorporateActions(result);
   labelCells(tbody.closest('table'));
   labelCells(porBody.closest('table'));
   const df = dh.depth?.data?.fetched_at;
