@@ -2,7 +2,7 @@
 
 > AI-assisted: this script was written with AI assistance.
 
-**Track:** Pyth Network bounty (Stocklana hackathon)
+**Bounties:** Best Use of PreStocks and Best use of Pyth market data (Stocklana hackathon)
 
 ---
 
@@ -81,6 +81,6 @@ node cli.js
 
 ## [2:10–2:30] Close
 
-> "Peg Watch is infrastructure for the tokenized-stock stack: a quick sanity check before you trade, build a vault, or wire a lending market. Built for Stocklana's Pyth bounty — comparing real equity reference data to on-chain xStock prices on Solana."
+> "Peg Watch is infrastructure for the tokenized-stock stack: a quick sanity check before you trade, build a vault, or wire a lending market. Built for Stocklana's PreStocks and Pyth bounties — comparing PreStocks tokens to their published mark, and real equity reference data from Pyth to on-chain xStock prices on Solana."
 
 *[End on the web table with all five tokens visible.]*

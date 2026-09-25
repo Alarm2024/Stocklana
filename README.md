@@ -8,7 +8,7 @@
 
 Peg Watch compares **on-chain xStock prices** (Jupiter Price API) against **Pyth equity reference prices** (`Equity.US.*/USD`) for five tokens: **TSLAx, AAPLx, NVDAx, GOOGLx, SPYx**.
 
-Built for **[Stocklana](https://hackathons.solana.com)** — submitted under the **Pyth Network bounty** (best use of Pyth market data: underlying equity vs on-chain tokenized exposure).
+Built for **[Stocklana](https://hackathons.solana.com)** — submitted under two bounties: **Best Use of PreStocks** (PreStocks tab: pre-IPO token price vs PreStocks mark, depth quotes, on-chain checks) and **Best use of Pyth market data** (xStocks tab: underlying equity vs on-chain tokenized exposure).
 
 > **AI-assisted:** analysis text, README, and demo script in this repo were written with AI assistance.
 
@@ -288,9 +288,13 @@ cli.js          Terminal table
 DEMO_SCRIPT.md  2-minute hackathon video script
 ```
 
-## Hackathon track
+## Hackathon bounties
 
-**Pyth Network bounty** — compares Pyth `Equity.US.*/USD` reference feeds to on-chain xStock prices from Jupiter (with the issuer's own quote as a third reference), exactly the “underlying market vs on-chain asset” wedge described in the bounty brief. Also relevant to Stocklana **Infrastructure** (price feeds / analytics).
+Submitted under both the **Best Use of PreStocks** and the **Best use of Pyth market data** bounties.
+
+**Best Use of PreStocks** — the PreStocks tab compares each PreStocks token's Jupiter price with the mark price published by the PreStocks API and flags ±10% as RICH / CHEAP vs mark. Read-only Jupiter quotes at $1k and $10k (buy and sell) show the depth-adjusted premium and price impact, and every API figure is re-checked on-chain: Jupiter price for the same mint, supply via `getTokenSupply`, and mint account via `getAccountInfo`. The mark is not fair value, and a premium is not an arbitrage — tokens may not be redeemable at mark.
+
+**Best use of Pyth market data** — compares Pyth `Equity.US.*/USD` reference feeds to on-chain xStock prices from Jupiter (with the issuer's own quote as a third reference), exactly the “underlying market vs on-chain asset” wedge described in the bounty brief. Also relevant to Stocklana **Infrastructure** (price feeds / analytics).
 
 ## License
 
