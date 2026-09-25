@@ -49,7 +49,7 @@ own table derives the "upgraded account address" with shard 0 and the upgraded p
 
 **Status checked on-chain 2026-09-25 ~10:15 UTC:**
 - The upgraded program is live (e.g. SOL/USD's upgraded shard-0 account `7AviUf9n…` exists, owned by `rec2HH…`, publishing every few seconds).
-- These five equity feeds are **not** in Pyth's sponsored Solana feed list (the docs' `solana-mainnet.json` has 64 sponsored feeds; the only equity one is `Equity.US.GLXY/USD`). Their **upgraded** PDAs (shard 0 and 1) **do not exist** yet.
+- These five equity feeds are **not** in Pyth's sponsored Solana feed list (the docs' `solana_mainnet.json` lists 46 sponsored feeds as of 2026-09-25, none of them these five feed ids; the only stock-index entries are `INDEX.GLXY/USD` and `INDEX.FORD/USD`). Their **upgraded** PDAs (shard 0 and 1) **do not exist** yet.
 - Their **current shard 0** accounts are stale (last publish: TSLA 2026-09-11, AAPL/GOOGL 2026-08-14, NVDA/SPY 2026-08-26 15:54 UTC — right before the 16:00 UTC upgrade).
 - Their **current shard 1** accounts are updated continuously (publish time within seconds, verification level Full, owner `rec5EK…`, feed id matches).
 
