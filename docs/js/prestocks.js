@@ -14,6 +14,9 @@ wireCharts(tbody, async () => (await loadDepthAndHistory()).history);
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+// external_url comes verbatim from the PreStocks API; esc() only escapes HTML entities, not
+// URL schemes, so validate http(s) before ever putting it in an href (blocks javascript: etc.).
+const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? esc(u) : null);
 const unknown = (reason) => `<span class="unknown">UNKNOWN</span>${reason ? `<br><span class="sub err">${esc(reason)}</span>` : ''}`;
 const usd = (v) => (isNum(v) ? `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null);
 const bn = (v) => (isNum(v) ? `$${(v / 1e9).toLocaleString('en-US', { maximumFractionDigits: 2 })}B` : null);
@@ -63,10 +66,13 @@ function render(data, dh) {
     inc(counts.sup, sup?.status || 'UNKNOWN');
     inc(counts.mint, mint?.status || 'UNKNOWN');
 
+    const href = safeUrl(t.external_url);
+    const nameLink = href ? `<a class="sub" href="${href}" rel="noopener">${esc(t.name ?? '')}</a>` : `<span class="sub">${esc(t.name ?? '')}</span>`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${esc(t.symbol ?? 'UNKNOWN')}</strong><br>
-        ${t.external_url ? `<a class="sub" href="${esc(t.external_url)}" rel="noopener">${esc(t.name ?? '')}</a>` : `<span class="sub">${esc(t.name ?? '')}</span>`}<br>
+        ${nameLink}<br>
         <span class="mono">${esc(t.mint ?? 'UNKNOWN')}</span></td>
       <td class="num">${usd(p.tokenPrice) ?? unknown('tokenPrice missing')}${at}</td>
       <td class="num">${usd(p.markPrice) ?? unknown('markPrice missing')}${at}</td>
