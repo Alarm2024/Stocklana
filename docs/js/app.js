@@ -1,5 +1,6 @@
 import { runPegWatch } from './peg-watch.js';
 import { THRESHOLDS } from './config.js';
+import { loadDepthAndHistory, findDepth, depthCell, sparkCell, wireCharts, historySummary, labelCells } from './depth.js';
 
 const tbody = document.getElementById('rows');
 const statusEl = document.getElementById('status');
@@ -7,6 +8,8 @@ const metaEl = document.getElementById('meta');
 const refreshBtn = document.getElementById('refresh');
 const issuerMetaEl = document.getElementById('issuer-meta');
 const porBody = document.getElementById('por-rows');
+const xDepthMetaEl = document.getElementById('x-depth-meta');
+wireCharts(tbody, async () => (await loadDepthAndHistory()).history);
 
 const utc = (iso) => (iso ? new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC' : 'UNKNOWN');
 const unk = (reason) => `<span class="unknown">UNKNOWN</span>${reason ? `<br><span class="sub err">${escapeHtml(reason)}</span>` : ''}`;
@@ -69,7 +72,7 @@ function flagClass(flags) {
   return '';
 }
 
-function render(result) {
+function render(result, dh) {
   tbody.innerHTML = '';
   for (const r of result.rows) {
     const tr = document.createElement('tr');
@@ -80,6 +83,8 @@ function render(result) {
       <td class="num">${r.refUsd != null ? '$' + r.refUsd.toFixed(2) : 'UNKNOWN'}</td>
       <td class="num">${r.refAge}</td>
       <td class="num ${r.premiumBps != null && Math.abs(r.premiumBps) > THRESHOLDS.premiumBps ? 'warn' : ''}">${r.premiumBpsLabel}</td>
+      <td class="num">${depthCell(findDepth(dh.depth, 'xstocks', r.symbol), dh.depth)}</td>
+      <td>${sparkCell(dh.history, 'xstocks', r.symbol)}</td>
       <td class="num">${r.quote != null ? '$' + r.quote.toFixed(2) + fetched(r.quoteFetchedAt) : unk(r.issuerErrors.find((e) => e.includes('quote')) || r.issuerErrors[0])}</td>
       <td class="num">${cmpCell(r.quoteVsJupiter, r.quote, 'xStocks', r.onChainUsd, 'Jupiter', r.quoteFetchedAt)}</td>
       <td class="num">${cmpCell(r.quoteVsPyth, r.quote, 'xStocks', r.refUsd, 'Pyth', r.quoteFetchedAt)}</td>
@@ -94,6 +99,10 @@ function render(result) {
   }
 
   renderPor(result);
+  labelCells(tbody.closest('table'));
+  labelCells(porBody.closest('table'));
+  const df = dh.depth?.data?.fetched_at;
+  xDepthMetaEl.textContent = `Depth quotes snapshot fetched ${df ? utc(df) : 'UNKNOWN'}${dh.depth?.error ? ` — UNKNOWN: ${dh.depth.error}` : ''} · ${historySummary(dh.history)}`;
   issuerMetaEl.innerHTML = result.issuerFetchedAt
     ? `xStocks issuer data (quote, multiplier, halt, PoR) snapshot fetched ${escapeHtml(utc(result.issuerFetchedAt))} — <strong>data age ${Math.max(0, Math.round((Date.now() - new Date(result.issuerFetchedAt)) / 60000))} min</strong>`
     : unk('xStocks issuer snapshot not loaded');
@@ -105,8 +114,8 @@ async function refresh() {
   refreshBtn.disabled = true;
   try {
     const { issuer, issuerError } = await loadIssuerSnapshot();
-    const result = await runPegWatch({ issuer, issuerError });
-    render(result);
+    const [result, dh] = await Promise.all([runPegWatch({ issuer, issuerError }), loadDepthAndHistory()]);
+    render(result, dh);
     statusEl.textContent = '';
   } catch (err) {
     statusEl.textContent = `Error: ${err.message || err}`;

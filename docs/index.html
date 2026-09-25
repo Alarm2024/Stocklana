@@ -2,7 +2,7 @@
 <html lang="en" data-theme="midnight">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Peg Watch — xStock peg monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +47,8 @@
           <th>Reference (Pyth)</th>
           <th>Ref age</th>
           <th>Premium / discount<br><span class="sub">Jupiter vs Pyth, bps</span></th>
+          <th>Depth-adjusted<br><span class="sub">Jupiter quotes vs Pyth</span></th>
+          <th>History</th>
           <th>xStocks quote<br><span class="sub">issuer price-data</span></th>
           <th>Quote vs Jupiter</th>
           <th>Quote vs Pyth</th>
@@ -56,11 +58,12 @@
         </tr>
       </thead>
       <tbody id="rows">
-        <tr><td colspan="12">Loading…</td></tr>
+        <tr><td colspan="14">Loading…</td></tr>
       </tbody>
     </table>
   </div>
   <p id="issuer-meta" class="meta"></p>
+  <p id="x-depth-meta" class="meta"></p>
 
   <h3 class="subhead">Proof of reserves <span class="sub">— as published by Backed/xStocks</span></h3>
   <div class="table-wrap">
@@ -96,6 +99,9 @@
       Multiplier: Jupiter prices are per scaled (UI) token = 1 share, so the premium compares them with the share price directly;
       equivalently, raw-token price = Jupiter × multiplier vs fair value per raw token = underlying × multiplier.
       HALTED (issuer <code>isTradingHalted</code>) suppresses premium flags.
+      Depth-adjusted: indicative Jupiter quote-API quotes (never a swap) to buy / sell ~$1,000 and ~$10,000 with USDC, effective
+      price per token vs Pyth and price impact vs the Jupiter price — not executable guarantees, not arbitrage. History sparklines:
+      one real point per snapshot run; tap for a larger chart.
     </p>
     <p class="thresholds" id="thresholds">
       Flags: |premium| > 100 bps, or reference older than 300s while market open = STALE.
@@ -122,6 +128,8 @@
             <th>Token price</th>
             <th>Mark price<br><span class="sub">as published by the PreStocks API</span></th>
             <th>Premium / discount vs mark</th>
+            <th>Depth-adjusted<br><span class="sub">Jupiter quotes vs mark</span></th>
+            <th>History</th>
             <th>Implied val. vs mark val.</th>
             <th>Jupiter price check</th>
             <th>Supply check</th>
@@ -129,11 +137,12 @@
           </tr>
         </thead>
         <tbody id="ps-rows">
-          <tr><td colspan="8">Loading…</td></tr>
+          <tr><td colspan="10">Loading…</td></tr>
         </tbody>
       </table>
     </div>
     <p id="ps-summary" class="meta"></p>
+    <p id="ps-depth-meta" class="meta"></p>
     <footer>
       <p>
         Token price, mark price, valuations and supply: <a href="https://prestocks.com">PreStocks</a> public API
@@ -146,6 +155,9 @@
         writes <a href="data/prestocks.json">data/prestocks.json</a>; this page reads that file and shows its age.
       </p>
       <p class="thresholds">
+        Depth-adjusted: indicative Jupiter quote-API quotes (never a swap) for buying / selling ~$1,000 and ~$10,000 with USDC;
+        effective price per token vs mark, and price impact vs the Jupiter price. Quotes are indicative, not executable guarantees,
+        and not an arbitrage. NO ROUTE = Jupiter found no route. History: one real point per snapshot run (tap a sparkline).
         Flags: premium ≥ +10% = RICH vs mark; ≤ −10% = CHEAP vs mark. Not investment advice. Mark is not fair value;
         a premium is not an arbitrage — tokens may not be redeemable at mark.
       </p>

@@ -7,6 +7,9 @@ const statusEl = document.getElementById('ps-status');
 const metaEl = document.getElementById('ps-meta');
 const summaryEl = document.getElementById('ps-summary');
 const btn = document.getElementById('ps-refresh');
+const depthMetaEl = document.getElementById('ps-depth-meta');
+import { loadDepthAndHistory, reloadDepthAndHistory, findDepth, depthCell, sparkCell, wireCharts, historySummary, labelCells } from './depth.js';
+wireCharts(tbody, async () => (await loadDepthAndHistory()).history);
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,11 +36,11 @@ function checkCell(c, fmt) {
   return unknown(c.error || c.status) + at;
 }
 
-function render(data) {
+function render(data, dh) {
   const tokens = data.tokens || [];
   tbody.innerHTML = '';
   if (!tokens.length) {
-    tbody.innerHTML = `<tr><td colspan="8">${unknown(data.last_attempt?.error || 'snapshot has no tokens')}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10">${unknown(data.last_attempt?.error || 'snapshot has no tokens')}</td></tr>`;
   }
   const counts = { jup: {}, sup: {}, mint: {} };
   const inc = (o, k) => (o[k] = (o[k] || 0) + 1);
@@ -68,6 +71,8 @@ function render(data) {
       <td class="num">${usd(p.tokenPrice) ?? unknown('tokenPrice missing')}${at}</td>
       <td class="num">${usd(p.markPrice) ?? unknown('markPrice missing')}${at}</td>
       <td class="num">${prem}${at}</td>
+      <td class="num">${depthCell(findDepth(dh.depth, 'prestocks', t.symbol), dh.depth)}</td>
+      <td>${sparkCell(dh.history, 'prestocks', t.symbol)}</td>
       <td class="num">${val}${at}</td>
       <td class="num">${checkCell(jup, (c) => `PreStocks ${usd(c.prestocks)} · Jupiter ${usd(c.jupiter)} (${pct(c.diff)})`)}</td>
       <td class="num">${checkCell(sup, (c) => `PreStocks ${c.prestocks?.toLocaleString('en-US')} · on-chain ${c.onchain?.toLocaleString('en-US')}`)}</td>
@@ -85,6 +90,8 @@ function render(data) {
     (data.last_attempt && !data.last_attempt.ok
       ? ` · <span class="err">last refresh attempt ${esc(time(data.last_attempt.at))} failed: ${esc(data.last_attempt.error)} (showing previous snapshot)</span>`
       : '');
+  labelCells(tbody.closest('table'));
+  depthMetaEl.textContent = `Depth quotes snapshot fetched ${time(dh.depth?.data?.fetched_at)} (age ${age(dh.depth?.data?.fetched_at)})${dh.depth?.error ? ` — UNKNOWN: ${dh.depth.error}` : ''} · ${historySummary(dh.history)}`;
   summaryEl.textContent = `On-chain checks — Jupiter price: ${fmtCounts(counts.jup)} · Supply: ${fmtCounts(counts.sup)} · Mint account: ${fmtCounts(counts.mint)}.`;
 }
 
@@ -94,10 +101,11 @@ async function load() {
   try {
     const res = await fetch(`data/prestocks.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    render(await res.json());
+    const data = await res.json();
+    render(data, await reloadDepthAndHistory());
     statusEl.textContent = '';
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8">${unknown(`could not load data/prestocks.json: ${e.message || e}`)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10">${unknown(`could not load data/prestocks.json: ${e.message || e}`)}</td></tr>`;
     metaEl.textContent = '';
     statusEl.textContent = '';
   } finally {
