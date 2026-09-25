@@ -279,7 +279,7 @@ node scripts/fetch-prestocks.mjs   # refresh docs/data/prestocks.json locally
 docs/           Static web app (GitHub Pages, served from main /docs)
   index.html
   js/           Shared fetch + peg logic (also used by CLI); prestocks.js renders the PreStocks tab
-  data/         prestocks.json snapshot (written by the GitHub Action)
+  data/         prestocks.json, xstocks.json, depth.json, history.json snapshots (written by the GitHub Action)
 scripts/fetch-prestocks.mjs   PreStocks API + on-chain checks -> docs/data/prestocks.json
 scripts/fetch-xstocks.mjs     xStocks public API -> docs/data/xstocks.json
 scripts/fetch-depth.mjs       Jupiter $1k/$10k quotes -> docs/data/depth.json + history.json
