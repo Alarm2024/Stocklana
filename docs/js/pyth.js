@@ -127,14 +127,19 @@ export async function fetchPythOnChainBatch(stocks, rpcUrls = ENDPOINTS.solanaRp
     (s.pythOnChainAccounts || [s.pythOnChainAccount]).map((a) => (typeof a === 'string' ? { address: a } : a)),
   );
   const all = lists.flat().map((a) => a.address);
-  let lastErr = 'all RPC endpoints failed';
+  const errs = [];
   for (const url of rpcUrls) {
     try {
-      const result = await rpcCall(url, 'getMultipleAccounts', [
-        all,
-        { encoding: 'base64', commitment: 'confirmed' },
-      ]);
-      const values = result?.value || [];
+      // Public RPCs cap getMultipleAccounts (publicnode: 10 keys), so request in chunks of 10.
+      const values = [];
+      let result = null;
+      for (let c = 0; c < all.length; c += 10) {
+        result = await rpcCall(url, 'getMultipleAccounts', [
+          all.slice(c, c + 10),
+          { encoding: 'base64', commitment: 'confirmed' },
+        ]);
+        values.push(...(result?.value || []));
+      }
       let k = 0;
       const results = stocks.map((stock, si) => {
         const parsed = lists[si].map((meta) => {
@@ -156,10 +161,11 @@ export async function fetchPythOnChainBatch(stocks, rpcUrls = ENDPOINTS.solanaRp
       });
       return { results, slot: result?.context?.slot ?? null, rpc: url };
     } catch (err) {
-      lastErr = String(err.message || err);
+      errs.push(String(err.message || err));
     }
   }
-  return { results: stocks.map(() => ({ ok: false, error: lastErr })), slot: null, rpc: null };
+  const error = errs.join('; ') || 'all RPC endpoints failed';
+  return { results: stocks.map(() => ({ ok: false, error })), slot: null, rpc: null };
 }
 
 export async function fetchPythOnChain(stock, rpcUrls = ENDPOINTS.solanaRpc) {
